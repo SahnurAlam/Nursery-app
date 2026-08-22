@@ -1,0 +1,7 @@
+{
+  "name": "Sahnur Nursery Manager",
+  "description": "Offline-first plant nursery inventory, sales, customer, expense and profit manager",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
