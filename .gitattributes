@@ -1,0 +1,11 @@
+# Treat binary files as binary so git never alters line endings
+*.jar binary
+*.png binary
+*.so binary
+*.aar binary
+
+# Unix scripts
+gradlew text eol=lf
+
+# Windows scripts
+gradlew.bat text eol=crlf
