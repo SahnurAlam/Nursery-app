@@ -25,7 +25,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: '8.7'
+          gradle-version: '9.3.1'
 
       - name: Setup Gradle Wrapper & Keystore
         run: |
@@ -34,7 +34,7 @@ jobs:
           fi
           if [ ! -f gradlew ]; then
             echo "gradlew not found, generating wrapper..."
-            gradle wrapper --gradle-version 8.7
+            gradle wrapper --gradle-version 9.3.1
           fi
           chmod +x gradlew
 
