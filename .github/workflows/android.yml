@@ -27,8 +27,9 @@ jobs:
         with:
           gradle-version: '9.3.1'
 
-      - name: Setup Gradle Wrapper & Keystore
+      - name: Setup Gradle Wrapper, Keystore & Environment
         run: |
+          touch .env
           if [ -f debug.keystore.base64 ]; then
             base64 -d debug.keystore.base64 > debug.keystore
           fi
@@ -36,7 +37,7 @@ jobs:
           chmod +x gradlew
 
       - name: Build with Gradle
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: gradle assembleDebug --no-daemon --no-configuration-cache --stacktrace
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
