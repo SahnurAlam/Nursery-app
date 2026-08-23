@@ -33,7 +33,7 @@ jobs:
         run: |
           touch .env
           if [ -f debug.keystore.base64 ]; then
-            base64 -d debug.keystore.base64 > debug.keystore
+            base64 -d debug.keystore.base64 > debug.keystore 2>/dev/null || true
           fi
           gradle wrapper --gradle-version 9.3.1 --distribution-type bin
           chmod +x gradlew
