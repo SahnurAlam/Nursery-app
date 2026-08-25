@@ -6,6 +6,7 @@ data class NurseryBackup(
     val nurseryName: String = "Sahnur Nursery",
     val plants: List<Plant> = emptyList(),
     val customers: List<Customer> = emptyList(),
+    val customerPurchases: List<CustomerPurchase> = emptyList(),
     val sales: List<Sale> = emptyList(),
     val expenses: List<Expense> = emptyList(),
     val stockLogs: List<StockLog> = emptyList()

@@ -3,6 +3,7 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/ic_nursery_icon"
+        android:drawable="@drawable/app_logo_fg_1787660205866"
         android:gravity="center" />
 </layer-list>
+

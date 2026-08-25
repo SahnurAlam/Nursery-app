@@ -6,8 +6,10 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.data.model.Customer
+import com.example.data.model.CustomerPurchase
 import com.example.data.model.Expense
 import com.example.data.model.Plant
+import com.example.data.model.PurchasePlatforms
 import com.example.data.model.Sale
 import com.example.data.model.SearchHistory
 import com.example.data.model.StockLog
@@ -20,17 +22,19 @@ import kotlinx.coroutines.launch
     entities = [
         Plant::class,
         Customer::class,
+        CustomerPurchase::class,
         Sale::class,
         Expense::class,
         StockLog::class,
         SearchHistory::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun plantDao(): PlantDao
     abstract fun customerDao(): CustomerDao
+    abstract fun customerPurchaseDao(): CustomerPurchaseDao
     abstract fun saleDao(): SaleDao
     abstract fun expenseDao(): ExpenseDao
     abstract fun stockLogDao(): StockLogDao
@@ -209,6 +213,13 @@ abstract class AppDatabase : RoomDatabase() {
 
             val sampleCustomers = listOf(
                 Customer(
+                    name = "Rahim",
+                    mobile = "+91 98765 12345",
+                    address = "Plot 18, Lake Garden, Sector 1",
+                    notes = "Exotic fruit sapling enthusiast",
+                    createdDate = now - 25 * day
+                ),
+                Customer(
                     name = "Rafiqul Islam",
                     mobile = "+91 98765 43210",
                     address = "Green Valley Gardens, Sector 4",
@@ -239,6 +250,56 @@ abstract class AppDatabase : RoomDatabase() {
             )
 
             database.customerDao().insertAll(sampleCustomers)
+
+            val samplePurchases = listOf(
+                CustomerPurchase(
+                    customerId = 1,
+                    platform = PurchasePlatforms.WHATSAPP,
+                    productName = "Miyazaki Mango",
+                    quantity = 1,
+                    purchasePrice = 999.0,
+                    purchaseDate = now - 15 * day,
+                    remarks = "Express delivery via WhatsApp order"
+                ),
+                CustomerPurchase(
+                    customerId = 1,
+                    platform = PurchasePlatforms.FACEBOOK,
+                    productName = "Thai Longan",
+                    quantity = 2,
+                    purchasePrice = 1699.0,
+                    purchaseDate = now - 10 * day,
+                    remarks = "Inquired from Facebook page ad"
+                ),
+                CustomerPurchase(
+                    customerId = 1,
+                    platform = PurchasePlatforms.DIRECT_ORDER,
+                    productName = "Guava Plant",
+                    quantity = 1,
+                    purchasePrice = 749.0,
+                    purchaseDate = now - 5 * day,
+                    remarks = "Farm visit direct pickup"
+                ),
+                CustomerPurchase(
+                    customerId = 2,
+                    platform = PurchasePlatforms.PHONE_CALL,
+                    productName = "Mango - Amrapali Grafted",
+                    quantity = 10,
+                    purchasePrice = 240.0,
+                    purchaseDate = now - 18 * day,
+                    remarks = "Commercial orchard planting"
+                ),
+                CustomerPurchase(
+                    customerId = 3,
+                    platform = PurchasePlatforms.INSTAGRAM,
+                    productName = "Monstera Deliciosa",
+                    quantity = 2,
+                    purchasePrice = 450.0,
+                    purchaseDate = now - 8 * day,
+                    remarks = "Instagram DM order"
+                )
+            )
+
+            database.customerPurchaseDao().insertPurchases(samplePurchases)
 
             val sampleSales = listOf(
                 Sale(

@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -54,6 +55,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,6 +72,8 @@ import com.example.ui.components.SearchHistoryRow
 import com.example.ui.components.SearchInputBar
 import com.example.ui.navigation.Screen
 import com.example.ui.viewmodel.NurseryViewModel
+import com.example.util.ExportUtils
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,10 +87,33 @@ fun CustomersScreen(
 
     var customerToDelete by remember { mutableStateOf<Customer?>(null) }
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
-            NurseryTopBar(title = "Customer Directory")
+            NurseryTopBar(
+                title = "Customer Directory",
+                actions = {
+                    IconButton(
+                        onClick = {
+                            coroutineScope.launch {
+                                val customerJson = viewModel.getExportCustomerDataJsonString()
+                                val timestamp = System.currentTimeMillis()
+                                ExportUtils.shareFile(
+                                    context = context,
+                                    content = customerJson,
+                                    fileName = "Sahnur_Customers_Data_$timestamp.json",
+                                    mimeType = "application/json",
+                                    title = "Export Customer Data JSON"
+                                )
+                            }
+                        },
+                        modifier = Modifier.testTag("export_customers_topbar_button")
+                    ) {
+                        Icon(Icons.Default.Upload, contentDescription = "Export Customer Data")
+                    }
+                }
+            )
         },
         floatingActionButton = {
             FloatingActionButton(

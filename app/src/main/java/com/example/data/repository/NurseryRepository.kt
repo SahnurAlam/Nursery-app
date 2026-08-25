@@ -3,9 +3,11 @@ package com.example.data.repository
 import androidx.room.withTransaction
 import com.example.data.local.AppDatabase
 import com.example.data.model.Customer
+import com.example.data.model.CustomerPurchase
 import com.example.data.model.Expense
 import com.example.data.model.NurseryBackup
 import com.example.data.model.Plant
+import com.example.data.model.PurchasePlatforms
 import com.example.data.model.Sale
 import com.example.data.model.SearchHistory
 import com.example.data.model.StockLog
@@ -20,6 +22,7 @@ class NurseryRepository(private val database: AppDatabase) {
 
     private val plantDao = database.plantDao()
     private val customerDao = database.customerDao()
+    private val customerPurchaseDao = database.customerPurchaseDao()
     private val saleDao = database.saleDao()
     private val expenseDao = database.expenseDao()
     private val stockLogDao = database.stockLogDao()
@@ -69,7 +72,54 @@ class NurseryRepository(private val database: AppDatabase) {
     fun searchCustomers(query: String): Flow<List<Customer>> = customerDao.searchCustomers(query)
     suspend fun insertCustomer(customer: Customer): Long = customerDao.insertCustomer(customer)
     suspend fun updateCustomer(customer: Customer) = customerDao.updateCustomer(customer)
-    suspend fun deleteCustomer(customer: Customer) = customerDao.deleteCustomer(customer)
+    suspend fun deleteCustomer(customer: Customer) {
+        database.withTransaction {
+            customerPurchaseDao.deletePurchasesByCustomerId(customer.id)
+            customerDao.deleteCustomer(customer)
+        }
+    }
+
+    // ----------------- CUSTOMER PURCHASES -----------------
+    val allCustomerPurchases: Flow<List<CustomerPurchase>> = customerPurchaseDao.getAllPurchases()
+    fun getPurchasesByCustomer(customerId: Long): Flow<List<CustomerPurchase>> =
+        customerPurchaseDao.getPurchasesByCustomerId(customerId)
+    suspend fun getPurchasesByCustomerList(customerId: Long): List<CustomerPurchase> =
+        customerPurchaseDao.getPurchasesByCustomerIdList(customerId)
+
+    suspend fun insertCustomerPurchase(purchase: CustomerPurchase): Long =
+        customerPurchaseDao.insertPurchase(purchase)
+
+    suspend fun updateCustomerPurchase(purchase: CustomerPurchase) =
+        customerPurchaseDao.updatePurchase(purchase)
+
+    suspend fun deleteCustomerPurchase(purchase: CustomerPurchase) =
+        customerPurchaseDao.deletePurchase(purchase)
+
+    suspend fun deleteCustomerPurchaseById(id: Long) =
+        customerPurchaseDao.deletePurchaseById(id)
+
+    suspend fun saveCustomerWithPurchases(
+        customer: Customer,
+        purchases: List<CustomerPurchase>
+    ): Long {
+        return database.withTransaction {
+            val customerId = if (customer.id == 0L) {
+                customerDao.insertCustomer(customer)
+            } else {
+                customerDao.updateCustomer(customer)
+                customer.id
+            }
+
+            customerPurchaseDao.deletePurchasesByCustomerId(customerId)
+            val updatedPurchases = purchases.map {
+                it.copy(id = 0, customerId = customerId)
+            }
+            if (updatedPurchases.isNotEmpty()) {
+                customerPurchaseDao.insertPurchases(updatedPurchases)
+            }
+            customerId
+        }
+    }
 
     // ----------------- SALES -----------------
     val allSales: Flow<List<Sale>> = saleDao.getAllSales()
@@ -240,6 +290,7 @@ class NurseryRepository(private val database: AppDatabase) {
     suspend fun exportToJsonString(nurseryName: String): String {
         val plants = plantDao.getAllPlantsList()
         val customers = customerDao.getAllCustomersList()
+        val customerPurchases = customerPurchaseDao.getAllPurchasesList()
         val sales = saleDao.getAllSalesList()
         val expenses = expenseDao.getAllExpensesList()
         val stockLogs = stockLogDao.getAllStockLogsList()
@@ -277,6 +328,21 @@ class NurseryRepository(private val database: AppDatabase) {
                         put("address", c.address)
                         put("notes", c.notes)
                         put("createdDate", c.createdDate)
+                    })
+                }
+            })
+
+            put("customerPurchases", JSONArray().apply {
+                customerPurchases.forEach { cp ->
+                    put(JSONObject().apply {
+                        put("id", cp.id)
+                        put("customerId", cp.customerId)
+                        put("platform", cp.platform)
+                        put("productName", cp.productName)
+                        put("quantity", cp.quantity)
+                        put("purchasePrice", cp.purchasePrice)
+                        put("purchaseDate", cp.purchaseDate)
+                        put("remarks", cp.remarks)
                     })
                 }
             })
@@ -332,11 +398,136 @@ class NurseryRepository(private val database: AppDatabase) {
         return root.toString(2)
     }
 
+    suspend fun exportCustomerDataJsonString(): String {
+        val customers = customerDao.getAllCustomersList()
+        val allPurchases = customerPurchaseDao.getAllPurchasesList()
+        val purchasesByCust = allPurchases.groupBy { it.customerId }
+
+        val root = JSONObject().apply {
+            put("exportType", "CUSTOMERS_ONLY")
+            put("app", "Sahnur Nursery Manager")
+            put("version", 1)
+            put("exportDate", System.currentTimeMillis())
+            put("totalCustomers", customers.size)
+
+            put("customers", JSONArray().apply {
+                customers.forEach { c ->
+                    put(JSONObject().apply {
+                        put("id", c.id)
+                        put("name", c.name)
+                        put("mobile", c.mobile)
+                        put("address", c.address)
+                        put("notes", c.notes)
+                        put("createdDate", c.createdDate)
+
+                        val custPurchases = purchasesByCust[c.id] ?: emptyList()
+                        put("purchaseHistory", JSONArray().apply {
+                            custPurchases.forEach { p ->
+                                put(JSONObject().apply {
+                                    put("id", p.id)
+                                    put("platform", p.platform)
+                                    put("productName", p.productName)
+                                    put("quantity", p.quantity)
+                                    put("purchasePrice", p.purchasePrice)
+                                    put("purchaseDate", p.purchaseDate)
+                                    put("remarks", p.remarks)
+                                })
+                            }
+                        })
+                    })
+                }
+            })
+        }
+        return root.toString(2)
+    }
+
     suspend fun importFromJsonString(jsonString: String): Boolean {
         return try {
             val root = JSONObject(jsonString)
+
+            // Check if this is a Customer-Only export file
+            val isCustomerOnly = root.optString("exportType") == "CUSTOMERS_ONLY" ||
+                    (root.has("customers") && !root.has("plants") && !root.has("expenses") && !root.has("stockLogs"))
+
+            if (isCustomerOnly) {
+                val customerList = mutableListOf<Customer>()
+                val purchaseList = mutableListOf<CustomerPurchase>()
+
+                val customersArray = root.getJSONArray("customers")
+                for (i in 0 until customersArray.length()) {
+                    val cObj = customersArray.getJSONObject(i)
+                    val custId = cObj.optLong("id", (i + 1).toLong())
+                    customerList.add(
+                        Customer(
+                            id = custId,
+                            name = cObj.getString("name"),
+                            mobile = cObj.optString("mobile", ""),
+                            address = cObj.optString("address", ""),
+                            notes = cObj.optString("notes", ""),
+                            createdDate = cObj.optLong("createdDate", System.currentTimeMillis())
+                        )
+                    )
+
+                    val purchaseArray = when {
+                        cObj.has("purchaseHistory") -> cObj.getJSONArray("purchaseHistory")
+                        cObj.has("purchases") -> cObj.getJSONArray("purchases")
+                        else -> null
+                    }
+
+                    if (purchaseArray != null) {
+                        for (j in 0 until purchaseArray.length()) {
+                            val pObj = purchaseArray.getJSONObject(j)
+                            purchaseList.add(
+                                CustomerPurchase(
+                                    id = pObj.optLong("id", 0),
+                                    customerId = custId,
+                                    platform = pObj.optString("platform", PurchasePlatforms.DIRECT_ORDER),
+                                    productName = pObj.optString("productName", "Plant"),
+                                    quantity = pObj.optInt("quantity", 1),
+                                    purchasePrice = pObj.optDouble("purchasePrice", 0.0),
+                                    purchaseDate = pObj.optLong("purchaseDate", System.currentTimeMillis()),
+                                    remarks = pObj.optString("remarks", "")
+                                )
+                            )
+                        }
+                    }
+                }
+
+                // If customerPurchases is provided at root level
+                if (root.has("customerPurchases")) {
+                    val rootPurchaseArray = root.getJSONArray("customerPurchases")
+                    for (k in 0 until rootPurchaseArray.length()) {
+                        val pObj = rootPurchaseArray.getJSONObject(k)
+                        purchaseList.add(
+                            CustomerPurchase(
+                                id = pObj.optLong("id", 0),
+                                customerId = pObj.optLong("customerId", 0),
+                                platform = pObj.optString("platform", PurchasePlatforms.DIRECT_ORDER),
+                                productName = pObj.optString("productName", "Plant"),
+                                quantity = pObj.optInt("quantity", 1),
+                                purchasePrice = pObj.optDouble("purchasePrice", 0.0),
+                                purchaseDate = pObj.optLong("purchaseDate", System.currentTimeMillis()),
+                                remarks = pObj.optString("remarks", "")
+                            )
+                        )
+                    }
+                }
+
+                database.withTransaction {
+                    customerPurchaseDao.clearAll()
+                    customerDao.clearAll()
+                    customerDao.insertAll(customerList)
+                    if (purchaseList.isNotEmpty()) {
+                        customerPurchaseDao.insertPurchases(purchaseList)
+                    }
+                }
+                return true
+            }
+
+            // Full database backup restore
             val plantList = mutableListOf<Plant>()
             val customerList = mutableListOf<Customer>()
+            val purchaseList = mutableListOf<CustomerPurchase>()
             val salesList = mutableListOf<Sale>()
             val expenseList = mutableListOf<Expense>()
             val logList = mutableListOf<StockLog>()
@@ -367,14 +558,53 @@ class NurseryRepository(private val database: AppDatabase) {
                 val array = root.getJSONArray("customers")
                 for (i in 0 until array.length()) {
                     val obj = array.getJSONObject(i)
+                    val custId = obj.optLong("id", 0)
                     customerList.add(
                         Customer(
-                            id = obj.optLong("id", 0),
+                            id = custId,
                             name = obj.getString("name"),
                             mobile = obj.optString("mobile", ""),
                             address = obj.optString("address", ""),
                             notes = obj.optString("notes", ""),
                             createdDate = obj.optLong("createdDate", System.currentTimeMillis())
+                        )
+                    )
+
+                    if (obj.has("purchaseHistory")) {
+                        val pArray = obj.getJSONArray("purchaseHistory")
+                        for (j in 0 until pArray.length()) {
+                            val pObj = pArray.getJSONObject(j)
+                            purchaseList.add(
+                                CustomerPurchase(
+                                    id = pObj.optLong("id", 0),
+                                    customerId = custId,
+                                    platform = pObj.optString("platform", PurchasePlatforms.DIRECT_ORDER),
+                                    productName = pObj.optString("productName", "Plant"),
+                                    quantity = pObj.optInt("quantity", 1),
+                                    purchasePrice = pObj.optDouble("purchasePrice", 0.0),
+                                    purchaseDate = pObj.optLong("purchaseDate", System.currentTimeMillis()),
+                                    remarks = pObj.optString("remarks", "")
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (root.has("customerPurchases")) {
+                val array = root.getJSONArray("customerPurchases")
+                for (i in 0 until array.length()) {
+                    val obj = array.getJSONObject(i)
+                    purchaseList.add(
+                        CustomerPurchase(
+                            id = obj.optLong("id", 0),
+                            customerId = obj.optLong("customerId", 0),
+                            platform = obj.optString("platform", PurchasePlatforms.DIRECT_ORDER),
+                            productName = obj.optString("productName", "Plant"),
+                            quantity = obj.optInt("quantity", 1),
+                            purchasePrice = obj.optDouble("purchasePrice", 0.0),
+                            purchaseDate = obj.optLong("purchaseDate", System.currentTimeMillis()),
+                            remarks = obj.optString("remarks", "")
                         )
                     )
                 }
@@ -442,12 +672,16 @@ class NurseryRepository(private val database: AppDatabase) {
             database.withTransaction {
                 plantDao.clearAll()
                 customerDao.clearAll()
+                customerPurchaseDao.clearAll()
                 saleDao.clearAll()
                 expenseDao.clearAll()
                 stockLogDao.clearAll()
 
                 plantDao.insertAll(plantList)
                 customerDao.insertAll(customerList)
+                if (purchaseList.isNotEmpty()) {
+                    customerPurchaseDao.insertPurchases(purchaseList)
+                }
                 saleDao.insertAll(salesList)
                 expenseDao.insertAll(expenseList)
                 stockLogDao.insertAll(logList)
@@ -463,6 +697,7 @@ class NurseryRepository(private val database: AppDatabase) {
         database.withTransaction {
             plantDao.clearAll()
             customerDao.clearAll()
+            customerPurchaseDao.clearAll()
             saleDao.clearAll()
             expenseDao.clearAll()
             stockLogDao.clearAll()

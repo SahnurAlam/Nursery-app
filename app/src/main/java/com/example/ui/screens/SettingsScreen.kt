@@ -47,6 +47,7 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -373,7 +374,7 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
-                        // Export Backup Button
+                        // Export Full Backup Button
                         Button(
                             onClick = {
                                 coroutineScope.launch {
@@ -398,6 +399,31 @@ fun SettingsScreen(
                             Text("Export Database Backup (JSON)")
                         }
 
+                        // Export Customer Data (JSON) Button
+                        FilledTonalButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    val customerJson = viewModel.getExportCustomerDataJsonString()
+                                    val timestamp = System.currentTimeMillis()
+                                    ExportUtils.shareFile(
+                                        context = context,
+                                        content = customerJson,
+                                        fileName = "Sahnur_Customers_Data_$timestamp.json",
+                                        mimeType = "application/json",
+                                        title = "Export Customer Data JSON"
+                                    )
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("export_customer_data_button"),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.Person, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Export Customer Data (JSON)")
+                        }
+
                         // Restore Backup Button
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -410,7 +436,7 @@ fun SettingsScreen(
                             ) {
                                 Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text("Import File")
+                                Text("Import JSON")
                             }
 
                             OutlinedButton(

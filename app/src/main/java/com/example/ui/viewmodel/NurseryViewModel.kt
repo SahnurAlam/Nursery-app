@@ -6,6 +6,7 @@ import com.example.data.local.AppThemeMode
 import com.example.data.local.UserPreferences
 import com.example.data.local.UserPreferencesRepository
 import com.example.data.model.Customer
+import com.example.data.model.CustomerPurchase
 import com.example.data.model.Expense
 import com.example.data.model.Plant
 import com.example.data.model.Sale
@@ -13,6 +14,7 @@ import com.example.data.model.SearchHistory
 import com.example.data.model.StockLog
 import com.example.data.repository.NurseryRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -416,10 +418,62 @@ class NurseryViewModel(
         }
     }
 
+    fun saveCustomerWithPurchases(
+        customer: Customer,
+        purchases: List<CustomerPurchase>,
+        onFinished: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            repository.saveCustomerWithPurchases(customer, purchases)
+            _userMessage.value = if (customer.id == 0L) {
+                "Customer \"${customer.name}\" and purchase history saved"
+            } else {
+                "Customer \"${customer.name}\" updated"
+            }
+            onFinished()
+        }
+    }
+
     fun deleteCustomer(customer: Customer) {
         viewModelScope.launch {
             repository.deleteCustomer(customer)
             _userMessage.value = "Customer removed"
+        }
+    }
+
+    fun getCustomerPurchasesFlow(customerId: Long): Flow<List<CustomerPurchase>> =
+        repository.getPurchasesByCustomer(customerId)
+
+    suspend fun getCustomerPurchasesList(customerId: Long): List<CustomerPurchase> =
+        repository.getPurchasesByCustomerList(customerId)
+
+    fun addCustomerPurchase(purchase: CustomerPurchase, onFinished: () -> Unit = {}) {
+        viewModelScope.launch {
+            repository.insertCustomerPurchase(purchase)
+            _userMessage.value = "Purchase record added"
+            onFinished()
+        }
+    }
+
+    fun updateCustomerPurchase(purchase: CustomerPurchase, onFinished: () -> Unit = {}) {
+        viewModelScope.launch {
+            repository.updateCustomerPurchase(purchase)
+            _userMessage.value = "Purchase record updated"
+            onFinished()
+        }
+    }
+
+    fun deleteCustomerPurchase(purchase: CustomerPurchase) {
+        viewModelScope.launch {
+            repository.deleteCustomerPurchase(purchase)
+            _userMessage.value = "Purchase record removed"
+        }
+    }
+
+    fun deleteCustomerPurchaseById(id: Long) {
+        viewModelScope.launch {
+            repository.deleteCustomerPurchaseById(id)
+            _userMessage.value = "Purchase record removed"
         }
     }
 
@@ -506,6 +560,10 @@ class NurseryViewModel(
     suspend fun getExportJsonString(): String {
         val nurseryName = userPreferences.value.nurseryName
         return repository.exportToJsonString(nurseryName)
+    }
+
+    suspend fun getExportCustomerDataJsonString(): String {
+        return repository.exportCustomerDataJsonString()
     }
 
     fun restoreFromJson(json: String, onResult: (Boolean) -> Unit) {

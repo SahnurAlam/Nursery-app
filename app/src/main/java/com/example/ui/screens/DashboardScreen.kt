@@ -385,7 +385,7 @@ fun DashboardScreen(
                         )
 
                         MetricCard(
-                            title = "Total Clients",
+                            title = "Total Customers",
                             value = "${uiState.totalCustomers}",
                             subtitle = "Buyers & Contracts",
                             icon = Icons.Default.People,
@@ -536,6 +536,26 @@ fun HeroBanner(
                                 style = MaterialTheme.typography.labelLarge
                             )
                         }
+                    }
+
+                    Spacer(Modifier.width(12.dp))
+
+                    Surface(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, Color.White.copy(alpha = 0.8f), CircleShape),
+                        color = Color.White,
+                        shadowElevation = 4.dp
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.app_logo_fg_1787660205866),
+                            contentDescription = "App Logo",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(8.dp),
+                            contentScale = ContentScale.Fit
+                        )
                     }
                 }
             }
@@ -709,7 +729,7 @@ fun QuickActionsGrid(
         ) {
             QuickActionTile(
                 icon = Icons.Default.PersonAdd,
-                label = "Add Client",
+                label = "Add Customer",
                 iconTint = MaterialTheme.colorScheme.tertiary,
                 iconContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
                 modifier = Modifier.weight(1f),
