@@ -101,7 +101,6 @@ fun SettingsScreen(
     var contactPhone by remember(preferences.contactPhone) { mutableStateOf(preferences.contactPhone) }
     var nurseryAddress by remember(preferences.nurseryAddress) { mutableStateOf(preferences.nurseryAddress) }
 
-    var showResetConfirmDialog by remember { mutableStateOf(false) }
     var showRestoreJsonDialog by remember { mutableStateOf(false) }
     var jsonRestoreText by remember { mutableStateOf("") }
     var showAboutDialog by remember { mutableStateOf(false) }
@@ -449,20 +448,6 @@ fun SettingsScreen(
                                 Text("Paste JSON")
                             }
                         }
-
-                        HorizontalDivider()
-
-                        // Reload Demo Sample Data Button
-                        OutlinedButton(
-                            onClick = { showResetConfirmDialog = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Reset with Sample Nursery Data")
-                        }
                     }
                 }
             }
@@ -479,7 +464,7 @@ fun SettingsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Sahnur Nursery Manager",
+                            text = "Nursery Data Management",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -499,30 +484,6 @@ fun SettingsScreen(
                 }
             }
         }
-    }
-
-    // Reset Confirmation Dialog
-    if (showResetConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { showResetConfirmDialog = false },
-            title = { Text("Reset to Sample Demo Data?") },
-            text = { Text("This will reload sample plants (Mango, Guava, Rose, Indoor Ficus), sample customers, and demo sales. Existing data will be replaced.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.resetToDemoData()
-                        showResetConfirmDialog = false
-                    }
-                ) {
-                    Text("Reset Data", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showResetConfirmDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 
     // Paste JSON Restore Dialog

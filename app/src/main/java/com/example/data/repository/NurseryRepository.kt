@@ -296,7 +296,7 @@ class NurseryRepository(private val database: AppDatabase) {
         val stockLogs = stockLogDao.getAllStockLogsList()
 
         val root = JSONObject().apply {
-            put("app", "Sahnur Nursery Manager")
+            put("app", "Nursery Data Management")
             put("version", 1)
             put("nurseryName", nurseryName)
             put("exportDate", System.currentTimeMillis())
@@ -405,7 +405,7 @@ class NurseryRepository(private val database: AppDatabase) {
 
         val root = JSONObject().apply {
             put("exportType", "CUSTOMERS_ONLY")
-            put("app", "Sahnur Nursery Manager")
+            put("app", "Nursery Data Management")
             put("version", 1)
             put("exportDate", System.currentTimeMillis())
             put("totalCustomers", customers.size)
@@ -690,19 +690,6 @@ class NurseryRepository(private val database: AppDatabase) {
         } catch (e: Exception) {
             e.printStackTrace()
             false
-        }
-    }
-
-    suspend fun resetWithDemoData() {
-        database.withTransaction {
-            plantDao.clearAll()
-            customerDao.clearAll()
-            customerPurchaseDao.clearAll()
-            saleDao.clearAll()
-            expenseDao.clearAll()
-            stockLogDao.clearAll()
-            searchHistoryDao.clearAllHistory()
-            AppDatabase.seedInitialData(database)
         }
     }
 }

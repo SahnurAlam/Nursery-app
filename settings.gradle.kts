@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Sahnur Nursery Manager"
+rootProject.name = "Nursery Data Management"
 
 include(":app")

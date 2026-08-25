@@ -577,11 +577,4 @@ class NurseryViewModel(
             onResult(success)
         }
     }
-
-    fun resetToDemoData() {
-        viewModelScope.launch {
-            repository.resetWithDemoData()
-            _userMessage.value = "Sample nursery data reloaded!"
-        }
-    }
 }
