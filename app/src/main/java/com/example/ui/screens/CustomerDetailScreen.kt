@@ -469,14 +469,20 @@ fun CustomerDetailScreen(
                                         PlatformBadge(platform = "Direct Order")
                                         Spacer(Modifier.width(8.dp))
                                         Text(
-                                            text = sale.plantName,
+                                            text = sale.getItemsSummary(),
                                             style = MaterialTheme.typography.bodyLarge,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
                                     Spacer(Modifier.height(4.dp))
+                                    val saleItems = sale.getSaleItems()
+                                    val detailSub = if (saleItems.size > 1) {
+                                        "${sale.quantity} units (${saleItems.size} plants) • ${sale.paymentMethod}"
+                                    } else {
+                                        "${sale.quantity} pcs @ ${preferences.currencySymbol} ${sale.unitPrice} • ${sale.paymentMethod}"
+                                    }
                                     Text(
-                                        text = "${sale.quantity} pcs @ ${preferences.currencySymbol} ${sale.unitPrice} • ${sale.paymentMethod}",
+                                        text = detailSub,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -490,6 +496,16 @@ fun CustomerDetailScreen(
                                             text = "Remarks: ${sale.notes}",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                        )
+                                    }
+                                    if (sale.discount > 0 || sale.discountPercent > 0) {
+                                        val pctDisplay = if (sale.discountPercent > 0) {
+                                            "${"%.2f".format(sale.discountPercent).trimEnd('0').trimEnd('.')}%"
+                                        } else ""
+                                        Text(
+                                            text = "Discount: " + (if (pctDisplay.isNotBlank()) "$pctDisplay (-${preferences.currencySymbol}${"%.2f".format(sale.discount)})" else "-${preferences.currencySymbol}${"%.2f".format(sale.discount)}"),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.error
                                         )
                                     }
                                 }

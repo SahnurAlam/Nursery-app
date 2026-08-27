@@ -15,14 +15,24 @@ object ExportUtils {
 
     fun generateSalesCsv(sales: List<Sale>, currencySymbol: String): String {
         val sb = StringBuilder()
-        sb.append("Sale ID,Date,Customer Name,Plant Name,Quantity,Unit Price ($currencySymbol),Discount ($currencySymbol),Total Amount ($currencySymbol),Payment Method,Notes\n")
+        sb.append("Sale ID,Date,Customer Name,Plant Items,Total Quantity,Subtotal ($currencySymbol),Discount (%),Discount Amount ($currencySymbol),Total Amount ($currencySymbol),Payment Method,Notes\n")
         sales.forEach { s ->
+            val items = s.getSaleItems()
+            val itemsSummary = items.joinToString("; ") { "${it.plantName} (${it.quantity}x @ $currencySymbol${it.unitPrice})" }
+            val subtotal = items.sumOf { it.quantity * it.unitPrice }
+            val pctDisplay = if (s.discountPercent > 0) {
+                "%.2f".format(s.discountPercent).trimEnd('0').trimEnd('.')
+            } else if (subtotal > 0 && s.discount > 0) {
+                "%.2f".format((s.discount / subtotal) * 100.0).trimEnd('0').trimEnd('.')
+            } else "0"
+
             sb.append("\"${s.id}\",")
             sb.append("\"${FormatUtils.formatDateTime(s.date)}\",")
             sb.append("\"${s.customerName.replace("\"", "\"\"")}\",")
-            sb.append("\"${s.plantName.replace("\"", "\"\"")}\",")
+            sb.append("\"${itemsSummary.ifBlank { s.plantName }.replace("\"", "\"\"")}\",")
             sb.append("${s.quantity},")
-            sb.append("${s.unitPrice},")
+            sb.append("${"%.2f".format(subtotal)},")
+            sb.append("\"$pctDisplay%\",")
             sb.append("${s.discount},")
             sb.append("${s.amount},")
             sb.append("\"${s.paymentMethod}\",")
@@ -133,30 +143,50 @@ Status: ${if (netProfit >= 0) "PROFITABLE BUSINESS" else "NET LOSS"}
         sale: Sale,
         currencySymbol: String
     ): String {
-        return """
-========================================
-       $nurseryName
-========================================
-$address
-Phone: $ownerPhone
-----------------------------------------
-INVOICE / CASH MEMO #INV-${sale.id.toString().padStart(5, '0')}
-Date: ${FormatUtils.formatDateTime(sale.date)}
-Customer: ${sale.customerName}
-----------------------------------------
-ITEM: ${sale.plantName}
-Qty: ${sale.quantity} x $currencySymbol ${"%.2f".format(sale.unitPrice)}
-Subtotal: $currencySymbol ${"%.2f".format(sale.quantity * sale.unitPrice)}
-Discount: $currencySymbol ${"%.2f".format(sale.discount)}
-----------------------------------------
-TOTAL AMOUNT: $currencySymbol ${"%.2f".format(sale.amount)}
-Payment Method: ${sale.paymentMethod}
-----------------------------------------
-Notes: ${sale.notes.ifBlank { "Thank you for buying from our nursery! Plant more trees." }}
-========================================
-    Visit Again! Happy Gardening!
-========================================
-        """.trimIndent()
+        val items = sale.getSaleItems()
+        val sb = StringBuilder()
+        sb.appendLine("========================================")
+        sb.appendLine("       $nurseryName")
+        sb.appendLine("========================================")
+        if (address.isNotBlank()) sb.appendLine(address)
+        if (ownerPhone.isNotBlank()) sb.appendLine("Phone: $ownerPhone")
+        sb.appendLine("----------------------------------------")
+        sb.appendLine("INVOICE / CASH MEMO #INV-${sale.id.toString().padStart(5, '0')}")
+        sb.appendLine("Date: ${FormatUtils.formatDateTime(sale.date)}")
+        sb.appendLine("Customer: ${sale.customerName}")
+        sb.appendLine("----------------------------------------")
+        sb.appendLine("ITEMS:")
+        val subtotal = items.sumOf { it.quantity * it.unitPrice }
+        items.forEachIndexed { index, item ->
+            sb.appendLine("${index + 1}. ${item.plantName}")
+            sb.appendLine("   ${item.quantity} pcs x $currencySymbol ${"%.2f".format(item.unitPrice)} = $currencySymbol ${"%.2f".format(item.quantity * item.unitPrice)}")
+            if (item.discount > 0) {
+                sb.appendLine("   Discount: -$currencySymbol ${"%.2f".format(item.discount)} (Net: $currencySymbol ${"%.2f".format(item.lineTotal)})")
+            }
+        }
+        sb.appendLine("----------------------------------------")
+        sb.appendLine("Subtotal: $currencySymbol ${"%.2f".format(subtotal)}")
+        if (sale.discount > 0 || sale.discountPercent > 0) {
+            val pctDisplay = if (sale.discountPercent > 0) {
+                "${"%.2f".format(sale.discountPercent).trimEnd('0').trimEnd('.')}%"
+            } else if (subtotal > 0 && sale.discount > 0) {
+                "${"%.2f".format((sale.discount / subtotal) * 100.0).trimEnd('0').trimEnd('.')}%"
+            } else ""
+
+            if (pctDisplay.isNotBlank()) {
+                sb.appendLine("Discount ($pctDisplay): -$currencySymbol ${"%.2f".format(sale.discount)}")
+            } else {
+                sb.appendLine("Discount: -$currencySymbol ${"%.2f".format(sale.discount)}")
+            }
+        }
+        sb.appendLine("TOTAL AMOUNT: $currencySymbol ${"%.2f".format(sale.amount)}")
+        sb.appendLine("Payment Method: ${sale.paymentMethod}")
+        sb.appendLine("----------------------------------------")
+        sb.appendLine("Notes: ${sale.notes.ifBlank { "Thank you for buying from our nursery! Plant more trees." }}")
+        sb.appendLine("========================================")
+        sb.appendLine("    Visit Again! Happy Gardening!")
+        sb.appendLine("========================================")
+        return sb.toString().trim()
     }
 
     fun shareContentAsFile(

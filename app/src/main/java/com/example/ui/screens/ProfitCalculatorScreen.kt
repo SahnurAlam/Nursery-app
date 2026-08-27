@@ -111,8 +111,10 @@ fun ProfitCalculatorScreen(
     val profitMargin = if (totalRevenue > 0) (netProfit / totalRevenue) * 100 else 0.0
 
     // Top Selling Plants by Revenue
-    val plantRevenueMap = filteredSales.groupBy { it.plantName }
-        .mapValues { (_, sList) -> Pair(sList.sumOf { it.amount }, sList.sumOf { it.quantity }) }
+    val plantRevenueMap = filteredSales.flatMap { it.getSaleItems() }
+        .filter { it.plantName.isNotBlank() }
+        .groupBy { it.plantName }
+        .mapValues { (_, sList) -> Pair(sList.sumOf { it.lineTotal }, sList.sumOf { it.quantity }) }
         .toList()
         .sortedByDescending { it.second.first }
         .take(5)

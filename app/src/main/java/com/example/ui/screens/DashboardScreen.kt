@@ -847,7 +847,7 @@ fun RecentSaleItem(
 
                 Column {
                     Text(
-                        text = sale.plantName,
+                        text = sale.getItemsSummary(),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface

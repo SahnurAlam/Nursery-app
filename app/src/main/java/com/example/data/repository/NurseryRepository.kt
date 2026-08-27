@@ -134,9 +134,32 @@ class NurseryRepository(private val database: AppDatabase) {
     suspend fun recordSale(sale: Sale): Long {
         return database.withTransaction {
             val saleId = saleDao.insertSale(sale)
+            val items = sale.getSaleItems()
 
-            // Deduct plant stock if plantId is valid
-            if (sale.plantId > 0) {
+            if (items.isNotEmpty()) {
+                for (item in items) {
+                    if (item.plantId > 0) {
+                        val plant = plantDao.getPlantById(item.plantId)
+                        if (plant != null) {
+                            val newQty = (plant.quantity - item.quantity).coerceAtLeast(0)
+                            plantDao.updatePlantQuantity(plant.id, newQty)
+
+                            stockLogDao.insertLog(
+                                StockLog(
+                                    plantId = plant.id,
+                                    plantName = plant.plantName,
+                                    type = StockLogType.SALE,
+                                    quantityChanged = -item.quantity,
+                                    remainingStock = newQty,
+                                    reason = "Sold to ${sale.customerName} (Invoice #$saleId)",
+                                    date = sale.date
+                                )
+                            )
+                        }
+                    }
+                }
+            } else if (sale.plantId > 0) {
+                // Fallback for single-item
                 val plant = plantDao.getPlantById(sale.plantId)
                 if (plant != null) {
                     val newQty = (plant.quantity - sale.quantity).coerceAtLeast(0)
@@ -357,11 +380,13 @@ class NurseryRepository(private val database: AppDatabase) {
                         put("plantName", s.plantName)
                         put("quantity", s.quantity)
                         put("unitPrice", s.unitPrice)
+                        put("discountPercent", s.discountPercent)
                         put("discount", s.discount)
                         put("amount", s.amount)
                         put("paymentMethod", s.paymentMethod)
                         put("notes", s.notes)
                         put("date", s.date)
+                        put("itemsJson", s.itemsJson)
                     })
                 }
             })
@@ -623,11 +648,13 @@ class NurseryRepository(private val database: AppDatabase) {
                             plantName = obj.optString("plantName", ""),
                             quantity = obj.optInt("quantity", 1),
                             unitPrice = obj.optDouble("unitPrice", 0.0),
+                            discountPercent = obj.optDouble("discountPercent", 0.0),
                             discount = obj.optDouble("discount", 0.0),
                             amount = obj.optDouble("amount", 0.0),
                             paymentMethod = obj.optString("paymentMethod", "Cash"),
                             notes = obj.optString("notes", ""),
-                            date = obj.optLong("date", System.currentTimeMillis())
+                            date = obj.optLong("date", System.currentTimeMillis()),
+                            itemsJson = obj.optString("itemsJson", "")
                         )
                     )
                 }

@@ -160,38 +160,88 @@ fun ReceiptDialog(
                         HorizontalDivider()
                         Spacer(Modifier.height(12.dp))
 
-                        // Plant Item details
-                        Row(
+                        // Plant Items details
+                        val items = sale.getSaleItems()
+                        Column(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = sale.plantName,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "${sale.quantity} pcs @ ${preferences.currencySymbol} ${"%.2f".format(sale.unitPrice)}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            items.forEachIndexed { index, item ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "${index + 1}. ${item.plantName}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "${item.quantity} pcs @ ${preferences.currencySymbol} ${"%.2f".format(item.unitPrice)}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        if (item.discount > 0) {
+                                            Text(
+                                                text = "Item Discount: -${preferences.currencySymbol} ${"%.2f".format(item.discount)}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = "${preferences.currencySymbol} ${"%.2f".format(item.lineTotal)}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                if (index < items.size - 1) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(vertical = 4.dp),
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                    )
+                                }
                             }
-                            Text(
-                                text = "${preferences.currencySymbol} ${"%.2f".format(sale.quantity * sale.unitPrice)}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold
-                            )
                         }
 
-                        if (sale.discount > 0) {
+                        Spacer(Modifier.height(8.dp))
+                        val subtotal = items.sumOf { it.quantity * it.unitPrice }
+                        if (items.size > 1 || sale.discount > 0 || sale.discountPercent > 0) {
+                            HorizontalDivider()
                             Spacer(Modifier.height(6.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = "Discount Applied:",
+                                    text = "Subtotal (${items.sumOf { it.quantity }} items):",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "${preferences.currencySymbol} ${"%.2f".format(subtotal)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+
+                        if (sale.discount > 0 || sale.discountPercent > 0) {
+                            val pctDisplay = if (sale.discountPercent > 0) {
+                                "${"%.2f".format(sale.discountPercent).trimEnd('0').trimEnd('.')}%"
+                            } else if (subtotal > 0 && sale.discount > 0) {
+                                "${"%.2f".format((sale.discount / subtotal) * 100.0).trimEnd('0').trimEnd('.')}%"
+                            } else ""
+
+                            Spacer(Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = if (pctDisplay.isNotBlank()) "Discount ($pctDisplay):" else "Discount:",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.error
                                 )

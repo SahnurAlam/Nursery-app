@@ -9,6 +9,7 @@ import com.example.data.model.Expense
 import com.example.data.model.Plant
 import com.example.data.model.PurchasePlatforms
 import com.example.data.model.Sale
+import com.example.data.model.SaleItem
 import com.example.data.model.StockLog
 import org.json.JSONArray
 import org.json.JSONObject
@@ -289,5 +290,85 @@ class ExampleRobolectricTest {
     assertEquals(0, customers.size)
     assertEquals(0, sales.size)
     assertEquals(0, expenses.size)
+  }
+
+  @Test
+  fun `verify multi-plant sale items model calculations`() {
+    val item1 = SaleItem(plantId = 1L, plantName = "Mango", quantity = 1, unitPrice = 699.0, discount = 0.0, lineTotal = 699.0)
+    val item2 = SaleItem(plantId = 2L, plantName = "Jamun", quantity = 1, unitPrice = 749.0, discount = 0.0, lineTotal = 749.0)
+    val item3 = SaleItem(plantId = 3L, plantName = "Guava", quantity = 5, unitPrice = 749.0, discount = 100.0, lineTotal = 5 * 749.0 - 100.0)
+
+    val items = listOf(item1, item2, item3)
+    val totalQty = items.sumOf { it.quantity }
+    val totalSubtotal = items.sumOf { it.quantity * it.unitPrice }
+    val totalDiscount = items.sumOf { it.discount }
+    val totalAmount = items.sumOf { it.lineTotal }
+
+    assertEquals(7, totalQty)
+    assertEquals(1 * 699.0 + 1 * 749.0 + 5 * 749.0, totalSubtotal, 0.001)
+    assertEquals(100.0, totalDiscount, 0.001)
+    assertEquals(5093.0, totalAmount, 0.001)
+
+    val jsonArray = JSONArray().apply {
+      items.forEach { put(it.toJson()) }
+    }
+    val jsonString = jsonArray.toString()
+
+    val sale = Sale(
+      id = 50L,
+      customerId = 1L,
+      customerName = "Ramesh Kumar",
+      plantId = item1.plantId,
+      plantName = "Mango, Jamun + 1 more",
+      quantity = totalQty,
+      unitPrice = totalSubtotal / totalQty,
+      discount = totalDiscount,
+      amount = totalAmount,
+      itemsJson = jsonString
+    )
+
+    val parsedItems = sale.getSaleItems()
+    assertEquals(3, parsedItems.size)
+    assertEquals("Mango", parsedItems[0].plantName)
+    assertEquals(1, parsedItems[0].quantity)
+    assertEquals(699.0, parsedItems[0].unitPrice, 0.001)
+
+    assertEquals("Jamun", parsedItems[1].plantName)
+    assertEquals(1, parsedItems[1].quantity)
+    assertEquals(749.0, parsedItems[1].unitPrice, 0.001)
+
+    assertEquals("Guava", parsedItems[2].plantName)
+    assertEquals(5, parsedItems[2].quantity)
+    assertEquals(749.0, parsedItems[2].unitPrice, 0.001)
+    assertEquals(100.0, parsedItems[2].discount, 0.001)
+    assertEquals(3645.0, parsedItems[2].lineTotal, 0.001)
+
+    assertEquals("Mango, Jamun, Guava", sale.getItemsSummary())
+  }
+
+  @Test
+  fun `verify legacy single-plant sale backward compatibility fallback`() {
+    val legacySale = Sale(
+      id = 10L,
+      customerId = 2L,
+      customerName = "Anita Roy",
+      plantId = 5L,
+      plantName = "Bougainvillea Pink",
+      quantity = 3,
+      unitPrice = 150.0,
+      discount = 20.0,
+      amount = 430.0,
+      itemsJson = ""
+    )
+
+    val items = legacySale.getSaleItems()
+    assertEquals(1, items.size)
+    assertEquals(5L, items[0].plantId)
+    assertEquals("Bougainvillea Pink", items[0].plantName)
+    assertEquals(3, items[0].quantity)
+    assertEquals(150.0, items[0].unitPrice, 0.001)
+    assertEquals(20.0, items[0].discount, 0.001)
+    assertEquals(430.0, items[0].lineTotal, 0.001)
+    assertEquals("Bougainvillea Pink", legacySale.getItemsSummary())
   }
 }

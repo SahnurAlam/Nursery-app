@@ -321,7 +321,7 @@ fun SaleCard(
 
                     Column {
                         Text(
-                            text = sale.plantName,
+                            text = sale.getItemsSummary(),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -373,12 +373,13 @@ fun SaleCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val itemsCount = sale.getSaleItems().size
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     shape = RoundedCornerShape(6.dp)
                 ) {
                     Text(
-                        text = "${sale.quantity} units • ${sale.paymentMethod}",
+                        text = if (itemsCount > 1) "${sale.quantity} units ($itemsCount items) • ${sale.paymentMethod}" else "${sale.quantity} units • ${sale.paymentMethod}",
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
@@ -399,9 +400,12 @@ fun SaleCard(
                 }
             }
 
-            if (sale.discount > 0) {
+            if (sale.discount > 0 || sale.discountPercent > 0) {
+                val pctDisplay = if (sale.discountPercent > 0) {
+                    "${"%.2f".format(sale.discountPercent).trimEnd('0').trimEnd('.')}%"
+                } else ""
                 Text(
-                    text = "🏷️ Discount of $currencySymbol ${sale.discount} applied",
+                    text = "🏷️ Discount applied: " + (if (pctDisplay.isNotBlank()) "$pctDisplay (-$currencySymbol${"%.2f".format(sale.discount)})" else "-$currencySymbol${"%.2f".format(sale.discount)}"),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(top = 4.dp)
