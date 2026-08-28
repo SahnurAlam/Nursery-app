@@ -1,5 +1,7 @@
 package com.example.ui.viewmodel
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppThemeMode
@@ -13,6 +15,7 @@ import com.example.data.model.Sale
 import com.example.data.model.SearchHistory
 import com.example.data.model.StockLog
 import com.example.data.repository.NurseryRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +26,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 
 enum class PlantSortOption(val displayName: String) {
     NAME_ASC("Name (A to Z)"),
@@ -557,9 +563,93 @@ class NurseryViewModel(
         }
     }
 
+    fun saveCustomLogoFromUri(uri: Uri, context: Context, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val brandingDir = File(context.filesDir, "branding")
+                if (!brandingDir.exists()) {
+                    brandingDir.mkdirs()
+                }
+                // Clean up any older logo files in branding directory
+                brandingDir.listFiles()?.forEach { it.delete() }
+
+                val fileName = "nursery_logo_${System.currentTimeMillis()}.png"
+                val destFile = File(brandingDir, fileName)
+
+                val success = context.contentResolver.openInputStream(uri)?.use { input ->
+                    FileOutputStream(destFile).use { output ->
+                        input.copyTo(output)
+                        true
+                    }
+                } ?: false
+
+                if (success && destFile.exists() && destFile.length() > 0) {
+                    preferencesRepository.updateCustomLogoPath(destFile.absolutePath)
+                    withContext(Dispatchers.Main) {
+                        _userMessage.value = "Nursery logo saved successfully!"
+                        onResult(true)
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        _userMessage.value = "Failed to save logo file."
+                        onResult(false)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    _userMessage.value = "Error saving logo: ${e.localizedMessage}"
+                    onResult(false)
+                }
+            }
+        }
+    }
+
+    fun removeCustomLogo(context: Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val brandingDir = File(context.filesDir, "branding")
+                if (brandingDir.exists()) {
+                    brandingDir.listFiles()?.forEach { it.delete() }
+                }
+                preferencesRepository.updateCustomLogoPath(null)
+                withContext(Dispatchers.Main) {
+                    _userMessage.value = "Nursery logo reset to default"
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                preferencesRepository.updateCustomLogoPath(null)
+            }
+        }
+    }
+
+    fun updateCustomLogoPath(path: String?) {
+        viewModelScope.launch {
+            preferencesRepository.updateCustomLogoPath(path)
+        }
+    }
+
+    fun updateInvoiceCustomization(notes: String, footer: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateInvoiceCustomization(notes, footer)
+            _userMessage.value = "Invoice customization saved successfully!"
+        }
+    }
+
+    fun resetInvoiceCustomization() {
+        viewModelScope.launch {
+            preferencesRepository.resetInvoiceCustomization()
+            _userMessage.value = "Invoice customization reset to defaults"
+        }
+    }
+
     suspend fun getExportJsonString(): String {
-        val nurseryName = userPreferences.value.nurseryName
-        return repository.exportToJsonString(nurseryName)
+        val prefs = userPreferences.value
+        return repository.exportToJsonString(
+            nurseryName = prefs.nurseryName,
+            invoiceNotes = prefs.invoiceNotes,
+            invoiceFooter = prefs.invoiceFooter
+        )
     }
 
     suspend fun getExportCustomerDataJsonString(): String {
@@ -570,6 +660,16 @@ class NurseryViewModel(
         viewModelScope.launch {
             val success = repository.importFromJsonString(json)
             if (success) {
+                try {
+                    val root = org.json.JSONObject(json)
+                    if (root.has("invoiceNotes") || root.has("invoiceFooter")) {
+                        val notes = root.optString("invoiceNotes", UserPreferences.DEFAULT_INVOICE_NOTES)
+                        val footer = root.optString("invoiceFooter", UserPreferences.DEFAULT_INVOICE_FOOTER)
+                        preferencesRepository.updateInvoiceCustomization(notes, footer)
+                    }
+                } catch (e: Exception) {
+                    // non-fatal
+                }
                 _userMessage.value = "Database backup restored successfully!"
             } else {
                 _userMessage.value = "Failed to restore backup. Invalid JSON file."

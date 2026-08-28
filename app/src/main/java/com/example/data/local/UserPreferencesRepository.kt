@@ -21,8 +21,16 @@ data class UserPreferences(
     val nurseryName: String = "Sahnur Nursery",
     val ownerName: String = "Sahnur Alam Mondal",
     val contactPhone: String = "+91 98765 00000",
-    val nurseryAddress: String = "Main Road, Greenbelt Nursery Zone"
-)
+    val nurseryAddress: String = "Main Road, Greenbelt Nursery Zone",
+    val customLogoPath: String? = null,
+    val invoiceNotes: String = DEFAULT_INVOICE_NOTES,
+    val invoiceFooter: String = DEFAULT_INVOICE_FOOTER
+) {
+    companion object {
+        const val DEFAULT_INVOICE_NOTES = "Thank you for buying from our nursery! Plant more trees."
+        const val DEFAULT_INVOICE_FOOTER = "Visit Again!..."
+    }
+}
 
 class UserPreferencesRepository(private val context: Context) {
 
@@ -33,6 +41,9 @@ class UserPreferencesRepository(private val context: Context) {
         val OWNER_NAME = stringPreferencesKey("owner_name")
         val CONTACT_PHONE = stringPreferencesKey("contact_phone")
         val NURSERY_ADDRESS = stringPreferencesKey("nursery_address")
+        val CUSTOM_LOGO_PATH = stringPreferencesKey("custom_logo_path")
+        val INVOICE_NOTES = stringPreferencesKey("invoice_notes")
+        val INVOICE_FOOTER = stringPreferencesKey("invoice_footer")
     }
 
     val userPreferencesFlow: Flow<UserPreferences> = context.dataStore.data.map { preferences ->
@@ -47,6 +58,9 @@ class UserPreferencesRepository(private val context: Context) {
         val ownerName = preferences[PreferencesKeys.OWNER_NAME] ?: "Sahnur Alam Mondal"
         val contactPhone = preferences[PreferencesKeys.CONTACT_PHONE] ?: "+91 98765 00000"
         val nurseryAddress = preferences[PreferencesKeys.NURSERY_ADDRESS] ?: "Main Road, Greenbelt Nursery Zone"
+        val customLogoPath = preferences[PreferencesKeys.CUSTOM_LOGO_PATH]?.takeIf { it.isNotBlank() }
+        val invoiceNotes = preferences[PreferencesKeys.INVOICE_NOTES] ?: UserPreferences.DEFAULT_INVOICE_NOTES
+        val invoiceFooter = preferences[PreferencesKeys.INVOICE_FOOTER] ?: UserPreferences.DEFAULT_INVOICE_FOOTER
 
         UserPreferences(
             themeMode = themeMode,
@@ -54,7 +68,10 @@ class UserPreferencesRepository(private val context: Context) {
             nurseryName = nurseryName,
             ownerName = ownerName,
             contactPhone = contactPhone,
-            nurseryAddress = nurseryAddress
+            nurseryAddress = nurseryAddress,
+            customLogoPath = customLogoPath,
+            invoiceNotes = invoiceNotes,
+            invoiceFooter = invoiceFooter
         )
     }
 
@@ -76,6 +93,30 @@ class UserPreferencesRepository(private val context: Context) {
             preferences[PreferencesKeys.OWNER_NAME] = owner
             preferences[PreferencesKeys.CONTACT_PHONE] = phone
             preferences[PreferencesKeys.NURSERY_ADDRESS] = address
+        }
+    }
+
+    suspend fun updateCustomLogoPath(path: String?) {
+        context.dataStore.edit { preferences ->
+            if (path.isNullOrBlank()) {
+                preferences.remove(PreferencesKeys.CUSTOM_LOGO_PATH)
+            } else {
+                preferences[PreferencesKeys.CUSTOM_LOGO_PATH] = path
+            }
+        }
+    }
+
+    suspend fun updateInvoiceCustomization(notes: String, footer: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.INVOICE_NOTES] = notes
+            preferences[PreferencesKeys.INVOICE_FOOTER] = footer
+        }
+    }
+
+    suspend fun resetInvoiceCustomization() {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.INVOICE_NOTES] = UserPreferences.DEFAULT_INVOICE_NOTES
+            preferences[PreferencesKeys.INVOICE_FOOTER] = UserPreferences.DEFAULT_INVOICE_FOOTER
         }
     }
 }

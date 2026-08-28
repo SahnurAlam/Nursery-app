@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import android.content.Context
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -57,7 +58,9 @@ fun ReceiptDialog(
         ownerPhone = preferences.contactPhone,
         address = preferences.nurseryAddress,
         sale = sale,
-        currencySymbol = preferences.currencySymbol
+        currencySymbol = preferences.currencySymbol,
+        invoiceNotes = preferences.invoiceNotes,
+        invoiceFooter = preferences.invoiceFooter
     )
 
     AlertDialog(
@@ -101,6 +104,14 @@ fun ReceiptDialog(
                         modifier = Modifier.padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        NurseryLogo(
+                            customLogoPath = preferences.customLogoPath,
+                            size = 56.dp,
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            backgroundColor = MaterialTheme.colorScheme.surface
+                        )
+                        Spacer(Modifier.height(8.dp))
                         Text(
                             text = preferences.nurseryName,
                             style = MaterialTheme.typography.titleLarge,
@@ -293,24 +304,29 @@ fun ReceiptDialog(
                             )
                         }
 
-                        if (sale.notes.isNotBlank()) {
-                            Spacer(Modifier.height(8.dp))
+                        val effectiveNotes = if (sale.notes.isNotBlank()) sale.notes else preferences.invoiceNotes
+                        if (effectiveNotes.isNotBlank()) {
+                            Spacer(Modifier.height(10.dp))
                             Text(
-                                text = "Note: ${sale.notes}",
+                                text = "Note: $effectiveNotes",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
 
-                        Spacer(Modifier.height(16.dp))
-                        Text(
-                            text = "🌱 Thank you for choosing green living! 🌱",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary,
-                            textAlign = TextAlign.Center
-                        )
+                        if (preferences.invoiceFooter.isNotBlank()) {
+                            Spacer(Modifier.height(14.dp))
+                            Text(
+                                text = preferences.invoiceFooter,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.primary,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
             }

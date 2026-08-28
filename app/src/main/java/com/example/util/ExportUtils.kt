@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
+import com.example.data.local.UserPreferences
 import com.example.data.model.Customer
 import com.example.data.model.Expense
 import com.example.data.model.Plant
@@ -141,7 +142,9 @@ Status: ${if (netProfit >= 0) "PROFITABLE BUSINESS" else "NET LOSS"}
         ownerPhone: String,
         address: String,
         sale: Sale,
-        currencySymbol: String
+        currencySymbol: String,
+        invoiceNotes: String = UserPreferences.DEFAULT_INVOICE_NOTES,
+        invoiceFooter: String = UserPreferences.DEFAULT_INVOICE_FOOTER
     ): String {
         val items = sale.getSaleItems()
         val sb = StringBuilder()
@@ -181,11 +184,20 @@ Status: ${if (netProfit >= 0) "PROFITABLE BUSINESS" else "NET LOSS"}
         }
         sb.appendLine("TOTAL AMOUNT: $currencySymbol ${"%.2f".format(sale.amount)}")
         sb.appendLine("Payment Method: ${sale.paymentMethod}")
-        sb.appendLine("----------------------------------------")
-        sb.appendLine("Notes: ${sale.notes.ifBlank { "Thank you for buying from our nursery! Plant more trees." }}")
-        sb.appendLine("========================================")
-        sb.appendLine("    Visit Again! Happy Gardening!")
-        sb.appendLine("========================================")
+
+        val effectiveNotes = if (sale.notes.isNotBlank()) sale.notes else invoiceNotes
+        if (effectiveNotes.isNotBlank()) {
+            sb.appendLine("----------------------------------------")
+            sb.appendLine("Notes: $effectiveNotes")
+        }
+
+        if (invoiceFooter.isNotBlank()) {
+            sb.appendLine("========================================")
+            sb.appendLine("    $invoiceFooter")
+            sb.appendLine("========================================")
+        } else {
+            sb.appendLine("========================================")
+        }
         return sb.toString().trim()
     }
 

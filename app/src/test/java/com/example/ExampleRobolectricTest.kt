@@ -3,6 +3,7 @@ package com.example
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.local.AppDatabase
+import com.example.data.local.UserPreferences
 import com.example.data.model.Customer
 import com.example.data.model.CustomerPurchase
 import com.example.data.model.Expense
@@ -11,6 +12,7 @@ import com.example.data.model.PurchasePlatforms
 import com.example.data.model.Sale
 import com.example.data.model.SaleItem
 import com.example.data.model.StockLog
+import com.example.util.ExportUtils
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -370,5 +372,137 @@ class ExampleRobolectricTest {
     assertEquals(20.0, items[0].discount, 0.001)
     assertEquals(430.0, items[0].lineTotal, 0.001)
     assertEquals("Bougainvillea Pink", legacySale.getItemsSummary())
+  }
+
+  @Test
+  fun `verify user preferences default invoice notes and closing footer`() {
+    val prefs = UserPreferences()
+    assertEquals("Thank you for buying from our nursery! Plant more trees.", prefs.invoiceNotes)
+    assertEquals("Visit Again!...", prefs.invoiceFooter)
+  }
+
+  @Test
+  fun `verify receipt generation with default invoice notes and closing footer`() {
+    val sale = Sale(
+      id = 101L,
+      customerId = 1L,
+      customerName = "Ramesh Kumar",
+      plantId = 1L,
+      plantName = "Mango Tree",
+      quantity = 2,
+      unitPrice = 300.0,
+      discount = 50.0,
+      amount = 550.0,
+      paymentMethod = "Cash",
+      notes = ""
+    )
+
+    val receipt = ExportUtils.generateReceiptText(
+      nurseryName = "Sahnur Nursery",
+      ownerPhone = "+91 98765 00000",
+      address = "Greenbelt Zone",
+      sale = sale,
+      currencySymbol = "₹"
+    )
+
+    assertTrue(receipt.contains("Sahnur Nursery"))
+    assertTrue(receipt.contains("INVOICE / CASH MEMO #INV-00101"))
+    assertTrue(receipt.contains("Notes: Thank you for buying from our nursery! Plant more trees."))
+    assertTrue(receipt.contains("Visit Again!..."))
+  }
+
+  @Test
+  fun `verify receipt generation with customized invoice notes and closing footer`() {
+    val sale = Sale(
+      id = 102L,
+      customerId = 2L,
+      customerName = "Anita Roy",
+      plantId = 2L,
+      plantName = "Guava Plant",
+      quantity = 5,
+      unitPrice = 120.0,
+      discount = 0.0,
+      amount = 600.0,
+      paymentMethod = "UPI",
+      notes = ""
+    )
+
+    val customNotes = "Special Organic Fertilizer Guide included!\nWater gently twice a week."
+    val customFooter = "Thank you for supporting our green mission! 🌱🌻"
+
+    val receipt = ExportUtils.generateReceiptText(
+      nurseryName = "Green Leaf Nursery",
+      ownerPhone = "+91 91234 56789",
+      address = "Sector 5, Kolkata",
+      sale = sale,
+      currencySymbol = "₹",
+      invoiceNotes = customNotes,
+      invoiceFooter = customFooter
+    )
+
+    assertTrue(receipt.contains("Notes: Special Organic Fertilizer Guide included!\nWater gently twice a week."))
+    assertTrue(receipt.contains("Thank you for supporting our green mission! 🌱🌻"))
+  }
+
+  @Test
+  fun `verify receipt generation with blank notes and blank footer omits sections cleanly`() {
+    val sale = Sale(
+      id = 103L,
+      customerId = 3L,
+      customerName = "Subhashish Bose",
+      plantId = 3L,
+      plantName = "Rose Red",
+      quantity = 1,
+      unitPrice = 80.0,
+      discount = 0.0,
+      amount = 80.0,
+      paymentMethod = "Cash",
+      notes = ""
+    )
+
+    val receipt = ExportUtils.generateReceiptText(
+      nurseryName = "Botanica Gardens",
+      ownerPhone = "+91 90000 00000",
+      address = "Pune, Maharashtra",
+      sale = sale,
+      currencySymbol = "₹",
+      invoiceNotes = "",
+      invoiceFooter = ""
+    )
+
+    assertFalse(receipt.contains("Notes:"))
+    assertFalse(receipt.contains("Visit Again"))
+    assertTrue(receipt.endsWith("========================================"))
+  }
+
+  @Test
+  fun `verify sale specific notes override global invoice notes`() {
+    val sale = Sale(
+      id = 104L,
+      customerId = 4L,
+      customerName = "Deepak Sen",
+      plantId = 4L,
+      plantName = "Lemon Hybrid",
+      quantity = 2,
+      unitPrice = 150.0,
+      discount = 0.0,
+      amount = 300.0,
+      paymentMethod = "Card",
+      notes = "Special delivery request: Deliver after 5 PM"
+    )
+
+    val receipt = ExportUtils.generateReceiptText(
+      nurseryName = "Sahnur Nursery",
+      ownerPhone = "+91 98765 00000",
+      address = "Greenbelt Zone",
+      sale = sale,
+      currencySymbol = "₹",
+      invoiceNotes = "Default plant more trees note",
+      invoiceFooter = "Happy Gardening!"
+    )
+
+    assertTrue(receipt.contains("Notes: Special delivery request: Deliver after 5 PM"))
+    assertFalse(receipt.contains("Default plant more trees note"))
+    assertTrue(receipt.contains("Happy Gardening!"))
   }
 }

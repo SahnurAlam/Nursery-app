@@ -310,7 +310,11 @@ class NurseryRepository(private val database: AppDatabase) {
     }
 
     // ----------------- BACKUP & RESTORE -----------------
-    suspend fun exportToJsonString(nurseryName: String): String {
+    suspend fun exportToJsonString(
+        nurseryName: String,
+        invoiceNotes: String = "",
+        invoiceFooter: String = ""
+    ): String {
         val plants = plantDao.getAllPlantsList()
         val customers = customerDao.getAllCustomersList()
         val customerPurchases = customerPurchaseDao.getAllPurchasesList()
@@ -322,6 +326,8 @@ class NurseryRepository(private val database: AppDatabase) {
             put("app", "Nursery Data Management")
             put("version", 1)
             put("nurseryName", nurseryName)
+            if (invoiceNotes.isNotBlank()) put("invoiceNotes", invoiceNotes)
+            if (invoiceFooter.isNotBlank()) put("invoiceFooter", invoiceFooter)
             put("exportDate", System.currentTimeMillis())
 
             put("plants", JSONArray().apply {

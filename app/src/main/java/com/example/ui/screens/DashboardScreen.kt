@@ -81,6 +81,7 @@ import com.example.R
 import com.example.data.model.Plant
 import com.example.data.model.Sale
 import com.example.ui.components.MetricCard
+import com.example.ui.components.NurseryLogo
 import com.example.ui.components.NurseryTopBar
 import com.example.ui.components.ReceiptDialog
 import com.example.ui.components.SectionHeader
@@ -311,6 +312,7 @@ fun DashboardScreen(
                 HeroBanner(
                     nurseryName = preferences.nurseryName,
                     ownerName = preferences.ownerName,
+                    customLogoPath = preferences.customLogoPath,
                     onAddSale = { onNavigateTo(Screen.CreateSale.createRoute()) }
                 )
             }
@@ -461,6 +463,7 @@ fun DashboardScreen(
 fun HeroBanner(
     nurseryName: String,
     ownerName: String,
+    customLogoPath: String?,
     onAddSale: () -> Unit
 ) {
     OutlinedCard(
@@ -540,23 +543,13 @@ fun HeroBanner(
 
                     Spacer(Modifier.width(12.dp))
 
-                    Surface(
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(CircleShape)
-                            .border(2.dp, Color.White.copy(alpha = 0.8f), CircleShape),
-                        color = Color.White,
-                        shadowElevation = 4.dp
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.app_logo_fg_1787660205866),
-                            contentDescription = "App Logo",
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(8.dp),
-                            contentScale = ContentScale.Fit
-                        )
-                    }
+                    NurseryLogo(
+                        customLogoPath = customLogoPath,
+                        size = 72.dp,
+                        shape = CircleShape,
+                        border = BorderStroke(2.dp, Color.White.copy(alpha = 0.8f)),
+                        backgroundColor = Color.White
+                    )
                 }
             }
         }

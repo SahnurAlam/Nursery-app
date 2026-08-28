@@ -4,6 +4,10 @@ import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,21 +25,32 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -69,14 +84,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.example.data.local.AppThemeMode
+import com.example.data.local.UserPreferences
+import com.example.data.model.Sale
+import com.example.ui.components.NurseryLogo
 import com.example.ui.components.NurseryTopBar
+import com.example.ui.components.ReceiptDialog
 import com.example.ui.theme.ExpenseRed
 import com.example.ui.theme.InStockGreen
 import com.example.ui.theme.InStockGreenContainer
@@ -101,9 +125,25 @@ fun SettingsScreen(
     var contactPhone by remember(preferences.contactPhone) { mutableStateOf(preferences.contactPhone) }
     var nurseryAddress by remember(preferences.nurseryAddress) { mutableStateOf(preferences.nurseryAddress) }
 
+    var invoiceNotes by remember(preferences.invoiceNotes) { mutableStateOf(preferences.invoiceNotes) }
+    var invoiceFooter by remember(preferences.invoiceFooter) { mutableStateOf(preferences.invoiceFooter) }
+    var showResetInvoiceConfirmDialog by remember { mutableStateOf(false) }
+    var showPreviewInvoiceDialog by remember { mutableStateOf(false) }
+
     var showRestoreJsonDialog by remember { mutableStateOf(false) }
     var jsonRestoreText by remember { mutableStateOf("") }
     var showAboutDialog by remember { mutableStateOf(false) }
+    var showResetLogoConfirmDialog by remember { mutableStateOf(false) }
+    var tempSelectedLogoUri by remember { mutableStateOf<Uri?>(null) }
+
+    // Image picker launcher for custom nursery logo
+    val logoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            tempSelectedLogoUri = uri
+        }
+    }
 
     // File picker for JSON backup restore
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -350,7 +390,395 @@ fun SettingsScreen(
                 }
             }
 
-            // SECTION 3: Database Backup & Restore
+            // SECTION 3: Nursery Branding & Logo Management
+            item {
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Palette, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Branding & Logo", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        }
+
+                        Text(
+                            text = "Set your custom nursery brand logo. It will appear throughout the app on the dashboard, receipts, invoices, and reports.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        // Central Logo Preview Area
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                if (tempSelectedLogoUri != null) {
+                                    Surface(
+                                        modifier = Modifier
+                                            .size(96.dp)
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(16.dp)),
+                                        color = Color.White,
+                                        shadowElevation = 4.dp
+                                    ) {
+                                        AsyncImage(
+                                            model = tempSelectedLogoUri,
+                                            contentDescription = "New Logo Preview",
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(6.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    }
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer
+                                    ) {
+                                        Text(
+                                            text = "Preview: New Logo Selected (Unsaved)",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                } else {
+                                    NurseryLogo(
+                                        customLogoPath = preferences.customLogoPath,
+                                        size = 96.dp,
+                                        shape = RoundedCornerShape(16.dp),
+                                        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outlineVariant),
+                                        backgroundColor = Color.White
+                                    )
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = if (preferences.customLogoPath != null) InStockGreenContainer else MaterialTheme.colorScheme.secondaryContainer
+                                    ) {
+                                        Text(
+                                            text = if (preferences.customLogoPath != null) "Active: Custom Nursery Logo" else "Active: Default Nursery Logo",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (preferences.customLogoPath != null) InStockGreen else MaterialTheme.colorScheme.onSecondaryContainer,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Logo Actions
+                        if (tempSelectedLogoUri != null) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        tempSelectedLogoUri?.let { uri ->
+                                            viewModel.saveCustomLogoFromUri(uri, context) { success ->
+                                                if (success) {
+                                                    tempSelectedLogoUri = null
+                                                }
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .testTag("save_logo_button"),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Save Logo")
+                                }
+
+                                OutlinedButton(
+                                    onClick = { tempSelectedLogoUri = null },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .testTag("cancel_logo_button"),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Cancel")
+                                }
+                            }
+
+                            FilledTonalButton(
+                                onClick = { logoPickerLauncher.launch("image/*") },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("change_selected_logo_button"),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Choose Different Image")
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = { logoPickerLauncher.launch("image/*") },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .testTag("select_logo_button"),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(if (preferences.customLogoPath != null) "Change Logo" else "Upload Logo")
+                                }
+
+                                if (preferences.customLogoPath != null) {
+                                    OutlinedButton(
+                                        onClick = { showResetLogoConfirmDialog = true },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .testTag("reset_logo_button"),
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            contentColor = ExpenseRed
+                                        )
+                                    ) {
+                                        Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("Reset Logo")
+                                    }
+                                }
+                            }
+                        }
+
+                        Text(
+                            text = "💡 Supported formats: PNG, JPG, WEBP. Changing the in-app nursery logo does not alter your Android device app icon.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                        )
+                    }
+                }
+            }
+
+            // SECTION 4: Invoice / Memo Customization
+            item {
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ReceiptLong,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "Invoice / Memo Customization",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Customize default notes & footer printed on sales memos",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                        OutlinedTextField(
+                            value = invoiceNotes,
+                            onValueChange = { invoiceNotes = it },
+                            label = { Text("Invoice Notes") },
+                            placeholder = { Text("e.g. Thank you for buying from our nursery! Plant more trees.") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("settings_invoice_notes_input"),
+                            minLines = 2,
+                            maxLines = 4,
+                            shape = RoundedCornerShape(10.dp),
+                            supportingText = {
+                                Text("Appears below the total amount and payment method")
+                            }
+                        )
+
+                        OutlinedTextField(
+                            value = invoiceFooter,
+                            onValueChange = { invoiceFooter = it },
+                            label = { Text("Closing Message") },
+                            placeholder = { Text("e.g. Visit Again! 🌱") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("settings_invoice_footer_input"),
+                            minLines = 2,
+                            maxLines = 3,
+                            shape = RoundedCornerShape(10.dp),
+                            supportingText = {
+                                Text("Appears at the very bottom/footer of the sales memo")
+                            }
+                        )
+
+                        // Live preview container
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "LIVE MEMO PREVIEW",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = "#INV-00101",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(vertical = 2.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                )
+
+                                Text(
+                                    text = "1. Mango Plant (Hybrid)  2 pcs x ${preferences.currencySymbol} 350.00",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "TOTAL PAID: ${preferences.currencySymbol} 650.00 (Cash / UPI)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                if (invoiceNotes.isNotBlank()) {
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = "Note: $invoiceNotes",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                } else {
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        text = "(Notes section empty — omitted from memo)",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontStyle = FontStyle.Italic,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+
+                                if (invoiceFooter.isNotBlank()) {
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(
+                                        text = invoiceFooter,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                } else {
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        text = "(Closing message empty — omitted from memo)",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontStyle = FontStyle.Italic,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+
+                        FilledTonalButton(
+                            onClick = { showPreviewInvoiceDialog = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("preview_invoice_memo_button"),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Preview Full Invoice")
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    viewModel.updateInvoiceCustomization(invoiceNotes, invoiceFooter)
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("save_invoice_customization_button"),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Save")
+                            }
+
+                            OutlinedButton(
+                                onClick = { showResetInvoiceConfirmDialog = true },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("reset_invoice_customization_button"),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Reset to Default")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // SECTION 5: Database Backup & Restore
             item {
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -526,6 +954,94 @@ fun SettingsScreen(
                     Text("Cancel")
                 }
             }
+        )
+    }
+
+    // Reset Logo Confirmation Dialog
+    if (showResetLogoConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetLogoConfirmDialog = false },
+            title = { Text("Reset Nursery Logo") },
+            text = {
+                Text("Are you sure you want to remove your custom nursery logo and restore the default branding logo?")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.removeCustomLogo(context)
+                        showResetLogoConfirmDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed)
+                ) {
+                    Text("Reset to Default")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetLogoConfirmDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Reset Invoice Customization Confirmation Dialog
+    if (showResetInvoiceConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetInvoiceConfirmDialog = false },
+            title = { Text("Reset Invoice Customization") },
+            text = {
+                Text(
+                    "Are you sure you want to reset invoice notes and closing message to default values?\n\n" +
+                    "• Default Notes:\n\"${UserPreferences.DEFAULT_INVOICE_NOTES}\"\n\n" +
+                    "• Default Closing:\n\"${UserPreferences.DEFAULT_INVOICE_FOOTER}\""
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        invoiceNotes = UserPreferences.DEFAULT_INVOICE_NOTES
+                        invoiceFooter = UserPreferences.DEFAULT_INVOICE_FOOTER
+                        viewModel.resetInvoiceCustomization()
+                        showResetInvoiceConfirmDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed)
+                ) {
+                    Text("Reset to Default")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetInvoiceConfirmDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Full Invoice / Memo Preview Dialog
+    if (showPreviewInvoiceDialog) {
+        val previewSale = remember {
+            Sale(
+                id = 101L,
+                customerId = 1L,
+                customerName = "Ramesh Kumar (Sample Preview)",
+                plantId = 1L,
+                plantName = "Thai 7 Guava (Grafted)",
+                quantity = 3,
+                unitPrice = 180.0,
+                discount = 40.0,
+                amount = 500.0,
+                paymentMethod = "Cash / UPI",
+                notes = "",
+                date = System.currentTimeMillis()
+            )
+        }
+        ReceiptDialog(
+            sale = previewSale,
+            preferences = preferences.copy(
+                invoiceNotes = invoiceNotes,
+                invoiceFooter = invoiceFooter
+            ),
+            onDismiss = { showPreviewInvoiceDialog = false }
         )
     }
 }
