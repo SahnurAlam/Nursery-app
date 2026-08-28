@@ -548,6 +548,8 @@ fun CustomerDetailScreen(
         ReceiptDialog(
             sale = sale,
             preferences = preferences,
+            customerMobile = customer?.mobile.orEmpty(),
+            customerAddress = customer?.address.orEmpty(),
             onDismiss = { selectedSaleForReceipt = null }
         )
     }

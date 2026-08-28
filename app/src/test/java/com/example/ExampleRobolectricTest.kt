@@ -13,6 +13,10 @@ import com.example.data.model.Sale
 import com.example.data.model.SaleItem
 import com.example.data.model.StockLog
 import com.example.util.ExportUtils
+import com.example.util.LogoBrandingManager
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.net.Uri
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -504,5 +508,91 @@ class ExampleRobolectricTest {
     assertTrue(receipt.contains("Notes: Special delivery request: Deliver after 5 PM"))
     assertFalse(receipt.contains("Default plant more trees note"))
     assertTrue(receipt.contains("Happy Gardening!"))
+  }
+
+  @Test
+  fun `verify default user preferences logo is null`() {
+    val prefs = UserPreferences()
+    assertEquals(null, prefs.customLogoPath)
+  }
+
+  @Test
+  fun `verify logo branding manager save and reset workflow`() {
+    val context: Context = ApplicationProvider.getApplicationContext()
+
+    // Create a dummy bitmap file to simulate user-selected image
+    val testImageFile = java.io.File(context.cacheDir, "test_logo.png")
+    val testBitmap = Bitmap.createBitmap(200, 200, Bitmap.Config.ARGB_8888)
+    testBitmap.eraseColor(Color.GREEN)
+    java.io.FileOutputStream(testImageFile).use { out ->
+      testBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+    }
+
+    val sourceUri = Uri.fromFile(testImageFile)
+    val savedPath = LogoBrandingManager.saveLogoAndGenerateLauncherAssets(
+      context = context,
+      sourceUri = sourceUri,
+      nurseryName = "Sahnur Nursery"
+    )
+
+    assertNotNull(savedPath)
+    val activeFile = LogoBrandingManager.getActiveLogoFile(savedPath)
+    assertNotNull(activeFile)
+    assertTrue(activeFile!!.exists())
+    assertTrue(activeFile.length() > 0)
+
+    // Verify reset restores default state
+    LogoBrandingManager.resetToDefaultLogo(context)
+    val resetFile = LogoBrandingManager.getActiveLogoFile(savedPath)
+    assertEquals(null, resetFile)
+  }
+
+  @Test
+  fun `verify receipt includes customer phone and delivery address when available`() {
+    val sale = Sale(
+      id = 42,
+      customerId = 5,
+      customerName = "Rafiqul Islam",
+      plantId = 1,
+      plantName = "Mango Amrapali",
+      quantity = 4,
+      unitPrice = 250.0,
+      amount = 1000.0,
+      paymentMethod = "UPI / GPay"
+    )
+
+    val receiptWithCustomerDetails = ExportUtils.generateReceiptText(
+      nurseryName = "Sahnur Plant Nursery",
+      ownerPhone = "+91 98765 43210",
+      address = "Nursery Road, Habra",
+      sale = sale,
+      currencySymbol = "₹",
+      customerMobile = "+91 91234 56789",
+      customerAddress = "Plot 14, River Garden, Sector 2"
+    )
+
+    assertTrue(receiptWithCustomerDetails.contains("Customer: Rafiqul Islam"))
+    assertTrue(receiptWithCustomerDetails.contains("Phone: +91 91234 56789"))
+    assertTrue(receiptWithCustomerDetails.contains("Address: Plot 14, River Garden, Sector 2"))
+
+    // Test walk-in without contact details
+    val walkInSale = Sale(
+      id = 43,
+      customerName = "Walk-in Customer",
+      plantName = "Rose Red",
+      quantity = 2,
+      unitPrice = 100.0,
+      amount = 200.0
+    )
+    val walkInReceipt = ExportUtils.generateReceiptText(
+      nurseryName = "Sahnur Plant Nursery",
+      ownerPhone = "+91 98765 43210",
+      address = "Nursery Road, Habra",
+      sale = walkInSale,
+      currencySymbol = "₹"
+    )
+    assertTrue(walkInReceipt.contains("Customer: Walk-in Customer"))
+    assertFalse(walkInReceipt.contains("Phone: +91 91234 56789"))
+    assertFalse(walkInReceipt.contains("Address: Plot 14"))
   }
 }

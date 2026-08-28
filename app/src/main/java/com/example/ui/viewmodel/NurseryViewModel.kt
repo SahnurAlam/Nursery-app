@@ -15,6 +15,7 @@ import com.example.data.model.Sale
 import com.example.data.model.SearchHistory
 import com.example.data.model.StockLog
 import com.example.data.repository.NurseryRepository
+import com.example.util.LogoBrandingManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -565,40 +566,21 @@ class NurseryViewModel(
 
     fun saveCustomLogoFromUri(uri: Uri, context: Context, onResult: (Boolean) -> Unit = {}) {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val brandingDir = File(context.filesDir, "branding")
-                if (!brandingDir.exists()) {
-                    brandingDir.mkdirs()
-                }
-                // Clean up any older logo files in branding directory
-                brandingDir.listFiles()?.forEach { it.delete() }
-
-                val fileName = "nursery_logo_${System.currentTimeMillis()}.png"
-                val destFile = File(brandingDir, fileName)
-
-                val success = context.contentResolver.openInputStream(uri)?.use { input ->
-                    FileOutputStream(destFile).use { output ->
-                        input.copyTo(output)
-                        true
-                    }
-                } ?: false
-
-                if (success && destFile.exists() && destFile.length() > 0) {
-                    preferencesRepository.updateCustomLogoPath(destFile.absolutePath)
-                    withContext(Dispatchers.Main) {
-                        _userMessage.value = "Nursery logo saved successfully!"
-                        onResult(true)
-                    }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        _userMessage.value = "Failed to save logo file."
-                        onResult(false)
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
+            val nurseryName = userPreferences.value.nurseryName
+            val savedPath = LogoBrandingManager.saveLogoAndGenerateLauncherAssets(
+                context = context,
+                sourceUri = uri,
+                nurseryName = nurseryName
+            )
+            if (savedPath != null) {
+                preferencesRepository.updateCustomLogoPath(savedPath)
                 withContext(Dispatchers.Main) {
-                    _userMessage.value = "Error saving logo: ${e.localizedMessage}"
+                    _userMessage.value = "Nursery logo & launcher icon updated successfully!"
+                    onResult(true)
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    _userMessage.value = "Failed to save logo image."
                     onResult(false)
                 }
             }
@@ -607,18 +589,10 @@ class NurseryViewModel(
 
     fun removeCustomLogo(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val brandingDir = File(context.filesDir, "branding")
-                if (brandingDir.exists()) {
-                    brandingDir.listFiles()?.forEach { it.delete() }
-                }
-                preferencesRepository.updateCustomLogoPath(null)
-                withContext(Dispatchers.Main) {
-                    _userMessage.value = "Nursery logo reset to default"
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                preferencesRepository.updateCustomLogoPath(null)
+            LogoBrandingManager.resetToDefaultLogo(context)
+            preferencesRepository.updateCustomLogoPath(null)
+            withContext(Dispatchers.Main) {
+                _userMessage.value = "Nursery branding & launcher icon reset to default"
             }
         }
     }

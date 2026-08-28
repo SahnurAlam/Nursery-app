@@ -408,7 +408,7 @@ fun SettingsScreen(
                         }
 
                         Text(
-                            text = "Set your custom nursery brand logo. It will appear throughout the app on the dashboard, receipts, invoices, and reports.",
+                            text = "Customize your nursery logo. The selected logo becomes the active branding across the entire app (dashboard, sales memos, receipts, reports) and updates the application launcher icon.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -560,14 +560,14 @@ fun SettingsScreen(
                                     ) {
                                         Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(6.dp))
-                                        Text("Reset Logo")
+                                        Text("Use Default Logo")
                                     }
                                 }
                             }
                         }
 
                         Text(
-                            text = "💡 Supported formats: PNG, JPG, WEBP. Changing the in-app nursery logo does not alter your Android device app icon.",
+                            text = "💡 Supported formats: PNG, JPG, WEBP. The selected image is preserved in original quality and automatically formatted for app branding and launcher icon.",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
                         )
@@ -963,7 +963,7 @@ fun SettingsScreen(
             onDismissRequest = { showResetLogoConfirmDialog = false },
             title = { Text("Reset Nursery Logo") },
             text = {
-                Text("Are you sure you want to remove your custom nursery logo and restore the default branding logo?")
+                Text("Are you sure you want to remove your custom nursery logo and restore the default nursery branding and launcher icon?")
             },
             confirmButton = {
                 Button(
@@ -973,7 +973,7 @@ fun SettingsScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed)
                 ) {
-                    Text("Reset to Default")
+                    Text("Use Default Logo")
                 }
             },
             dismissButton = {

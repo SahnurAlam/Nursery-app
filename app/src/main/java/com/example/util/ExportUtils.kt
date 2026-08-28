@@ -144,7 +144,9 @@ Status: ${if (netProfit >= 0) "PROFITABLE BUSINESS" else "NET LOSS"}
         sale: Sale,
         currencySymbol: String,
         invoiceNotes: String = UserPreferences.DEFAULT_INVOICE_NOTES,
-        invoiceFooter: String = UserPreferences.DEFAULT_INVOICE_FOOTER
+        invoiceFooter: String = UserPreferences.DEFAULT_INVOICE_FOOTER,
+        customerMobile: String = "",
+        customerAddress: String = ""
     ): String {
         val items = sale.getSaleItems()
         val sb = StringBuilder()
@@ -157,6 +159,12 @@ Status: ${if (netProfit >= 0) "PROFITABLE BUSINESS" else "NET LOSS"}
         sb.appendLine("INVOICE / CASH MEMO #INV-${sale.id.toString().padStart(5, '0')}")
         sb.appendLine("Date: ${FormatUtils.formatDateTime(sale.date)}")
         sb.appendLine("Customer: ${sale.customerName}")
+        if (customerMobile.isNotBlank()) {
+            sb.appendLine("Phone: $customerMobile")
+        }
+        if (customerAddress.isNotBlank()) {
+            sb.appendLine("Address: $customerAddress")
+        }
         sb.appendLine("----------------------------------------")
         sb.appendLine("ITEMS:")
         val subtotal = items.sumOf { it.quantity * it.unitPrice }

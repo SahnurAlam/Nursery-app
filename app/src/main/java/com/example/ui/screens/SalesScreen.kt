@@ -78,6 +78,7 @@ fun SalesScreen(
     onNavigateTo: (String) -> Unit
 ) {
     val sales by viewModel.sales.collectAsStateWithLifecycle()
+    val customers by viewModel.customers.collectAsStateWithLifecycle()
     val dateFilter by viewModel.salesDateFilter.collectAsStateWithLifecycle()
     val searchQuery by viewModel.salesSearchQuery.collectAsStateWithLifecycle()
     val saleSortOption by viewModel.saleSortOption.collectAsStateWithLifecycle()
@@ -242,9 +243,12 @@ fun SalesScreen(
     }
 
     selectedSaleForReceipt?.let { sale ->
+        val matchedCustomer = customers.find { it.id == sale.customerId }
         ReceiptDialog(
             sale = sale,
             preferences = preferences,
+            customerMobile = matchedCustomer?.mobile.orEmpty(),
+            customerAddress = matchedCustomer?.address.orEmpty(),
             onDismiss = { selectedSaleForReceipt = null }
         )
     }

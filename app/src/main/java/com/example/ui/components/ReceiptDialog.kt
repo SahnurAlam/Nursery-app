@@ -50,7 +50,9 @@ import com.example.util.FormatUtils
 fun ReceiptDialog(
     sale: Sale,
     preferences: UserPreferences,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    customerMobile: String = "",
+    customerAddress: String = ""
 ) {
     val context = LocalContext.current
     val receiptText = ExportUtils.generateReceiptText(
@@ -60,7 +62,9 @@ fun ReceiptDialog(
         sale = sale,
         currencySymbol = preferences.currencySymbol,
         invoiceNotes = preferences.invoiceNotes,
-        invoiceFooter = preferences.invoiceFooter
+        invoiceFooter = preferences.invoiceFooter,
+        customerMobile = customerMobile,
+        customerAddress = customerAddress
     )
 
     AlertDialog(
@@ -165,6 +169,48 @@ fun ReceiptDialog(
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.SemiBold
                             )
+                        }
+
+                        if (customerMobile.isNotBlank()) {
+                            Spacer(Modifier.height(2.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Phone:",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = customerMobile,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Normal
+                                )
+                            }
+                        }
+
+                        if (customerAddress.isNotBlank()) {
+                            Spacer(Modifier.height(2.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Text(
+                                    text = "Address:",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                                Text(
+                                    text = customerAddress,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Normal,
+                                    textAlign = TextAlign.End,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
 
                         Spacer(Modifier.height(12.dp))

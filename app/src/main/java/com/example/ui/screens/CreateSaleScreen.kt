@@ -26,12 +26,16 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocalFlorist
 import androidx.compose.material.icons.filled.Percent
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -234,7 +238,12 @@ fun CreateSaleScreen(
                     onDismissRequest = { customerDropdownExpanded = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("🚶 Walk-in Customer (General)") },
+                        text = {
+                            Column {
+                                Text("🚶 Walk-in Customer (General)", fontWeight = FontWeight.Bold)
+                                Text("Standard counter sale without stored profile", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        },
                         onClick = {
                             selectedCustomer = null
                             customerNameInput = "Walk-in Customer"
@@ -244,10 +253,21 @@ fun CreateSaleScreen(
                     customers.forEach { customer ->
                         DropdownMenuItem(
                             text = {
-                                Column {
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text(customer.name, fontWeight = FontWeight.Bold)
-                                    if (customer.mobile.isNotBlank()) {
-                                        Text(customer.mobile, style = MaterialTheme.typography.labelSmall)
+                                    if (customer.mobile.isNotBlank() || customer.address.isNotBlank()) {
+                                        Text(
+                                            text = buildString {
+                                                if (customer.mobile.isNotBlank()) append("📞 ${customer.mobile}")
+                                                if (customer.address.isNotBlank()) {
+                                                    if (customer.mobile.isNotBlank()) append(" • ")
+                                                    append("📍 ${customer.address}")
+                                                }
+                                            },
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1
+                                        )
                                     }
                                 }
                             },
@@ -256,6 +276,173 @@ fun CreateSaleScreen(
                                 customerNameInput = customer.name
                                 customerDropdownExpanded = false
                             }
+                        )
+                    }
+                }
+            }
+
+            // Customer Contact Details Preview Card
+            if (selectedCustomer != null) {
+                val cust = selectedCustomer!!
+                OutlinedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.outlinedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Selected Customer Profile",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.padding(2.dp)
+                            ) {
+                                Text(
+                                    text = "Active Record",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                        // Customer Name
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Name: ",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = cust.name,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        // Mobile / Phone
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Phone,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = if (cust.mobile.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Mobile / Phone: ",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (cust.mobile.isNotBlank()) {
+                                Text(
+                                    text = cust.mobile,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            } else {
+                                Text(
+                                    text = "Not provided",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+
+                        // Delivery Address / Location
+                        Row(
+                            verticalAlignment = Alignment.Top,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp).padding(top = 2.dp),
+                                tint = if (cust.address.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Delivery Address: ",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (cust.address.isNotBlank()) {
+                                Text(
+                                    text = cust.address,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Normal,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            } else {
+                                Text(
+                                    text = "Not provided",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+                    }
+                }
+            } else if (customerNameInput == "Walk-in Customer" || customerNameInput.isBlank()) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Walk-in sale (General Customer)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -733,6 +920,8 @@ fun CreateSaleScreen(
         ReceiptDialog(
             sale = sale,
             preferences = preferences,
+            customerMobile = selectedCustomer?.mobile.orEmpty(),
+            customerAddress = selectedCustomer?.address.orEmpty(),
             onDismiss = {
                 generatedSaleForReceipt = null
                 onNavigateBack()
