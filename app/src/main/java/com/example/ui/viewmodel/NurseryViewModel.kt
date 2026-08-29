@@ -603,6 +603,57 @@ class NurseryViewModel(
         }
     }
 
+    fun saveCustomAppIconFromUri(uri: Uri, context: Context, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val appName = userPreferences.value.nurseryName
+            val savedPath = LogoBrandingManager.saveCustomAppIcon(
+                context = context,
+                sourceUri = uri,
+                appName = appName
+            )
+            if (savedPath != null) {
+                preferencesRepository.updateCustomAppIconPath(savedPath)
+                withContext(Dispatchers.Main) {
+                    _userMessage.value = "App Launcher Icon updated successfully!"
+                    onResult(true)
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    _userMessage.value = "Failed to update App Icon."
+                    onResult(false)
+                }
+            }
+        }
+    }
+
+    fun pinAppIconToHomeScreen(context: Context, onResult: (Boolean) -> Unit = {}) {
+        val appName = userPreferences.value.nurseryName
+        val success = LogoBrandingManager.pinAppIconToHomeScreen(context, appName)
+        if (success) {
+            _userMessage.value = "Home screen icon request sent to launcher!"
+        } else {
+            _userMessage.value = "Launcher dynamic shortcut updated."
+        }
+        onResult(success)
+    }
+
+    fun removeCustomAppIcon(context: Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val appName = userPreferences.value.nurseryName
+            LogoBrandingManager.resetCustomAppIcon(context, appName)
+            preferencesRepository.updateCustomAppIconPath(null)
+            withContext(Dispatchers.Main) {
+                _userMessage.value = "App Launcher Icon reset to default"
+            }
+        }
+    }
+
+    fun updateCustomAppIconPath(path: String?) {
+        viewModelScope.launch {
+            preferencesRepository.updateCustomAppIconPath(path)
+        }
+    }
+
     fun updateInvoiceCustomization(notes: String, footer: String) {
         viewModelScope.launch {
             preferencesRepository.updateInvoiceCustomization(notes, footer)

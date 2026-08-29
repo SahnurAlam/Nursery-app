@@ -514,6 +514,38 @@ class ExampleRobolectricTest {
   fun `verify default user preferences logo is null`() {
     val prefs = UserPreferences()
     assertEquals(null, prefs.customLogoPath)
+    assertEquals(null, prefs.customAppIconPath)
+  }
+
+  @Test
+  fun `verify app launcher icon save and reset workflow`() {
+    val context: Context = ApplicationProvider.getApplicationContext()
+
+    // Create a dummy bitmap file to simulate user-selected app icon image
+    val testIconFile = java.io.File(context.cacheDir, "test_app_icon.png")
+    val testBitmap = Bitmap.createBitmap(256, 256, Bitmap.Config.ARGB_8888)
+    testBitmap.eraseColor(Color.BLUE)
+    java.io.FileOutputStream(testIconFile).use { out ->
+      testBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+    }
+
+    val sourceUri = Uri.fromFile(testIconFile)
+    val savedPath = LogoBrandingManager.saveCustomAppIcon(
+      context = context,
+      sourceUri = sourceUri,
+      appName = "Sahnur Nursery"
+    )
+
+    assertNotNull(savedPath)
+    val activeIconFile = LogoBrandingManager.getActiveAppIconFile(savedPath)
+    assertNotNull(activeIconFile)
+    assertTrue(activeIconFile!!.exists())
+    assertTrue(activeIconFile.length() > 0)
+
+    // Verify reset restores default state
+    LogoBrandingManager.resetCustomAppIcon(context, "Sahnur Nursery")
+    val resetIconFile = LogoBrandingManager.getActiveAppIconFile(savedPath)
+    assertEquals(null, resetIconFile)
   }
 
   @Test
