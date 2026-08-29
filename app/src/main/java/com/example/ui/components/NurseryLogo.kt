@@ -43,7 +43,7 @@ fun NurseryLogo(
     border: BorderStroke? = null,
     backgroundColor: Color = Color.White,
     contentDescription: String? = "Nursery Logo",
-    defaultResId: Int = R.drawable.app_logo_fg_1787660205866
+    defaultResId: Int = R.drawable.app_launcher_logo_1787670340900
 ) {
     val context = LocalContext.current
     val logoFile = remember(customLogoPath) {
