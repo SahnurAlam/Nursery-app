@@ -614,27 +614,16 @@ class NurseryViewModel(
             if (savedPath != null) {
                 preferencesRepository.updateCustomAppIconPath(savedPath)
                 withContext(Dispatchers.Main) {
-                    _userMessage.value = "App Launcher Icon updated successfully!"
+                    _userMessage.value = "App Launcher Icon selected and saved!"
                     onResult(true)
                 }
             } else {
                 withContext(Dispatchers.Main) {
-                    _userMessage.value = "Failed to update App Icon."
+                    _userMessage.value = "Failed to save App Icon."
                     onResult(false)
                 }
             }
         }
-    }
-
-    fun pinAppIconToHomeScreen(context: Context, onResult: (Boolean) -> Unit = {}) {
-        val appName = userPreferences.value.nurseryName
-        val success = LogoBrandingManager.pinAppIconToHomeScreen(context, appName)
-        if (success) {
-            _userMessage.value = "Home screen icon request sent to launcher!"
-        } else {
-            _userMessage.value = "Launcher dynamic shortcut updated."
-        }
-        onResult(success)
     }
 
     fun removeCustomAppIcon(context: Context) {

@@ -1,43 +1,32 @@
 package com.example.util
 
 import android.content.Context
-import android.content.Intent
-import android.content.pm.ShortcutInfo
-import android.content.pm.ShortcutManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
-import android.graphics.drawable.Icon
 import android.net.Uri
-import android.os.Build
-import com.example.MainActivity
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.min
 
 /**
- * Utility responsible for managing the dynamic nursery logo branding and
- * generating Android-compatible launcher icon assets from the user's uploaded image.
+ * Utility responsible for managing nursery logo branding and custom launcher icon assets.
  *
- * Strict Preservation Rules:
- * - Preserves the uploaded image exactly as provided.
- * - No color changes, no filters, no redesign, no added graphics, and no distortion.
- * - Only performs proportional scaling to generate launcher icon assets.
+ * Strict Fidelity Rules:
+ * - Preserves the uploaded images in high fidelity.
+ * - No unsolicited filters, redesigns, or distortive operations.
  */
 object LogoBrandingManager {
 
     private const val BRANDING_DIR = "branding"
     private const val LOGO_FILE_NAME = "nursery_active_logo.png"
     private const val APP_ICON_FILE_NAME = "custom_app_launcher_icon.png"
-    private const val LAUNCHER_ICON_FILE_NAME = "launcher_icon_custom.png"
-    private const val LAUNCHER_SHORTCUT_ID = "dynamic_nursery_launcher_shortcut"
 
     /**
-     * Saves the uploaded logo file in its original fidelity and generates
-     * Android launcher icon assets without altering color or content.
+     * Saves the uploaded logo file in its original fidelity for nursery branding (receipts, reports, UI).
      *
      * @return Absolute file path of the saved active logo, or null on failure.
      */
@@ -53,7 +42,7 @@ object LogoBrandingManager {
 
             val logoFile = File(brandingDir, LOGO_FILE_NAME)
 
-            // Step 1: Copy exact raw source stream with zero alteration
+            // Copy exact raw source stream with zero alteration
             val copySuccess = context.contentResolver.openInputStream(sourceUri)?.use { input ->
                 FileOutputStream(logoFile).use { output ->
                     input.copyTo(output)
@@ -65,14 +54,6 @@ object LogoBrandingManager {
                 return null
             }
 
-            // Step 2: If no separate custom app icon is set, generate launcher icon asset
-            val customAppIconFile = File(brandingDir, APP_ICON_FILE_NAME)
-            if (!customAppIconFile.exists()) {
-                val launcherIconFile = File(brandingDir, LAUNCHER_ICON_FILE_NAME)
-                generateLauncherIconAsset(logoFile, launcherIconFile)
-                updateLauncherShortcut(context, launcherIconFile, nurseryName)
-            }
-
             logoFile.absolutePath
         } catch (e: Exception) {
             e.printStackTrace()
@@ -81,7 +62,7 @@ object LogoBrandingManager {
     }
 
     /**
-     * Saves a separate uploaded image specifically for the Android launcher app icon.
+     * Saves a separate uploaded image specifically as the Android launcher app icon source.
      *
      * @return Absolute file path of the saved custom app icon, or null on failure.
      */
@@ -97,7 +78,7 @@ object LogoBrandingManager {
 
             val appIconFile = File(brandingDir, APP_ICON_FILE_NAME)
 
-            // Step 1: Copy exact raw source stream with zero alteration
+            // Copy exact raw source stream
             val copySuccess = context.contentResolver.openInputStream(sourceUri)?.use { input ->
                 FileOutputStream(appIconFile).use { output ->
                     input.copyTo(output)
@@ -109,13 +90,6 @@ object LogoBrandingManager {
                 return null
             }
 
-            // Step 2: Generate Android-compatible launcher icon asset (512x512 with safe padding)
-            val launcherIconFile = File(brandingDir, LAUNCHER_ICON_FILE_NAME)
-            generateLauncherIconAsset(appIconFile, launcherIconFile)
-
-            // Step 3: Update Android dynamic launcher shortcut on API 26+
-            updateLauncherShortcut(context, launcherIconFile, appName)
-
             appIconFile.absolutePath
         } catch (e: Exception) {
             e.printStackTrace()
@@ -124,47 +98,7 @@ object LogoBrandingManager {
     }
 
     /**
-     * Requests the Android OS to pin the launcher icon shortcut to the home screen.
-     */
-    fun pinAppIconToHomeScreen(context: Context, appName: String): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            try {
-                val shortcutManager = context.getSystemService(ShortcutManager::class.java) ?: return false
-                if (shortcutManager.isRequestPinShortcutSupported) {
-                    val brandingDir = File(context.filesDir, BRANDING_DIR)
-                    val appIconFile = File(brandingDir, APP_ICON_FILE_NAME).takeIf { it.exists() }
-                        ?: File(brandingDir, LAUNCHER_ICON_FILE_NAME).takeIf { it.exists() }
-
-                    val bitmap = if (appIconFile != null && appIconFile.exists()) {
-                        BitmapFactory.decodeFile(appIconFile.absolutePath)
-                    } else {
-                        BitmapFactory.decodeResource(context.resources, com.example.R.drawable.app_launcher_logo_1787670340900)
-                    } ?: return false
-
-                    val launchIntent = Intent(context, MainActivity::class.java).apply {
-                        action = Intent.ACTION_MAIN
-                        addCategory(Intent.CATEGORY_LAUNCHER)
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    }
-
-                    val pinShortcutInfo = ShortcutInfo.Builder(context, LAUNCHER_SHORTCUT_ID)
-                        .setShortLabel(appName.take(15))
-                        .setLongLabel(appName)
-                        .setIcon(Icon.createWithAdaptiveBitmap(bitmap))
-                        .setIntent(launchIntent)
-                        .build()
-
-                    return shortcutManager.requestPinShortcut(pinShortcutInfo, null)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-        return false
-    }
-
-    /**
-     * Resets specifically the custom app icon and restores the default/branding launcher icon.
+     * Resets specifically the custom app icon.
      */
     fun resetCustomAppIcon(context: Context, appName: String = "Sahnur Nursery") {
         try {
@@ -173,104 +107,13 @@ object LogoBrandingManager {
             if (appIconFile.exists()) {
                 appIconFile.delete()
             }
-
-            val logoFile = File(brandingDir, LOGO_FILE_NAME)
-            if (logoFile.exists()) {
-                val launcherIconFile = File(brandingDir, LAUNCHER_ICON_FILE_NAME)
-                generateLauncherIconAsset(logoFile, launcherIconFile)
-                updateLauncherShortcut(context, launcherIconFile, appName)
-            } else {
-                val launcherIconFile = File(brandingDir, LAUNCHER_ICON_FILE_NAME)
-                if (launcherIconFile.exists()) launcherIconFile.delete()
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    val shortcutManager = context.getSystemService(ShortcutManager::class.java)
-                    shortcutManager?.removeDynamicShortcuts(listOf(LAUNCHER_SHORTCUT_ID))
-                }
-            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
     /**
-     * Generates a 512x512 launcher icon bitmap maintaining strict aspect ratio and visual fidelity.
-     */
-    private fun generateLauncherIconAsset(sourceFile: File, outputFile: File) {
-        try {
-            val sourceBitmap = BitmapFactory.decodeFile(sourceFile.absolutePath) ?: return
-            val targetSize = 512
-            val outputBitmap = Bitmap.createBitmap(targetSize, targetSize, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(outputBitmap)
-
-            // Fill with pure white background for adaptive icon compatibility
-            canvas.drawColor(Color.WHITE)
-
-            // Safe margin for Android adaptive icon (72% inner safe zone)
-            val safeSize = (targetSize * 0.72f)
-            val scale = min(safeSize / sourceBitmap.width, safeSize / sourceBitmap.height)
-            val scaledWidth = sourceBitmap.width * scale
-            val scaledHeight = sourceBitmap.height * scale
-
-            val left = (targetSize - scaledWidth) / 2f
-            val top = (targetSize - scaledHeight) / 2f
-
-            val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-            canvas.drawBitmap(
-                sourceBitmap,
-                null,
-                RectF(left, top, left + scaledWidth, top + scaledHeight),
-                paint
-            )
-
-            FileOutputStream(outputFile).use { out ->
-                outputBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-            }
-
-            sourceBitmap.recycle()
-            outputBitmap.recycle()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    /**
-     * Updates or pins the dynamic launcher icon shortcut on Android 8.0+ devices.
-     */
-    private fun updateLauncherShortcut(
-        context: Context,
-        launcherIconFile: File,
-        nurseryName: String
-    ) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            try {
-                val shortcutManager = context.getSystemService(ShortcutManager::class.java)
-                if (shortcutManager != null && launcherIconFile.exists()) {
-                    val bitmap = BitmapFactory.decodeFile(launcherIconFile.absolutePath)
-                    if (bitmap != null) {
-                        val launchIntent = Intent(context, MainActivity::class.java).apply {
-                            action = Intent.ACTION_MAIN
-                            addCategory(Intent.CATEGORY_LAUNCHER)
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                        }
-
-                        val shortcut = ShortcutInfo.Builder(context, LAUNCHER_SHORTCUT_ID)
-                            .setShortLabel(nurseryName.take(15))
-                            .setLongLabel(nurseryName)
-                            .setIcon(Icon.createWithAdaptiveBitmap(bitmap))
-                            .setIntent(launchIntent)
-                            .build()
-
-                        shortcutManager.dynamicShortcuts = listOf(shortcut)
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    /**
-     * Resets branding back to the default app logo and clears custom launcher icon assets and shortcuts.
+     * Resets branding back to the default app logo and clears custom branding files.
      */
     fun resetToDefaultLogo(context: Context) {
         try {
@@ -278,11 +121,6 @@ object LogoBrandingManager {
             if (brandingDir.exists()) {
                 brandingDir.listFiles()?.forEach { it.delete() }
                 brandingDir.delete()
-            }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val shortcutManager = context.getSystemService(ShortcutManager::class.java)
-                shortcutManager?.removeDynamicShortcuts(listOf(LAUNCHER_SHORTCUT_ID))
             }
         } catch (e: Exception) {
             e.printStackTrace()

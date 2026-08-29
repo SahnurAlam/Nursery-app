@@ -36,7 +36,6 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
@@ -608,7 +607,7 @@ fun SettingsScreen(
                         }
 
                         Text(
-                            text = "Select or upload a custom image specifically for the Android launcher app icon displayed on your device home screen and app drawer.",
+                            text = "Select or upload a custom image specifically for the Android launcher app icon displayed in your device's app drawer and home screen for this application.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -788,24 +787,10 @@ fun SettingsScreen(
                                     }
                                 }
                             }
-
-                            FilledTonalButton(
-                                onClick = {
-                                    viewModel.pinAppIconToHomeScreen(context)
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("pin_app_icon_button"),
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Icon(Icons.Default.Home, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text("Add / Update on Home Screen")
-                            }
                         }
 
                         Text(
-                            text = "💡 Supported formats: PNG, JPG, WEBP. The image is formatted to standard Android adaptive launcher specs and applied to your home screen shortcut.",
+                            text = "💡 Supported formats: PNG, JPG, WEBP. The selected image serves as the app's real launcher icon embedded in the APK.",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
                         )
