@@ -603,6 +603,22 @@ class NurseryViewModel(
         }
     }
 
+    fun setAppLauncherIconTheme(theme: com.example.util.AppIconTheme, context: Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val success = com.example.util.AppIconManager.setAppIcon(context, theme)
+            if (success) {
+                preferencesRepository.updateAppIconThemeId(theme.id)
+                withContext(Dispatchers.Main) {
+                    _userMessage.value = "App Icon changed to ${theme.title}!"
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    _userMessage.value = "Failed to switch App Icon."
+                }
+            }
+        }
+    }
+
     fun saveCustomAppIconFromUri(uri: Uri, context: Context, onResult: (Boolean) -> Unit = {}) {
         viewModelScope.launch(Dispatchers.IO) {
             val appName = userPreferences.value.nurseryName

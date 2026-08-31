@@ -24,6 +24,7 @@ data class UserPreferences(
     val nurseryAddress: String = "Main Road, Greenbelt Nursery Zone",
     val customLogoPath: String? = null,
     val customAppIconPath: String? = null,
+    val appIconThemeId: String = "default",
     val invoiceNotes: String = DEFAULT_INVOICE_NOTES,
     val invoiceFooter: String = DEFAULT_INVOICE_FOOTER
 ) {
@@ -44,6 +45,7 @@ class UserPreferencesRepository(private val context: Context) {
         val NURSERY_ADDRESS = stringPreferencesKey("nursery_address")
         val CUSTOM_LOGO_PATH = stringPreferencesKey("custom_logo_path")
         val CUSTOM_APP_ICON_PATH = stringPreferencesKey("custom_app_icon_path")
+        val APP_ICON_THEME_ID = stringPreferencesKey("app_icon_theme_id")
         val INVOICE_NOTES = stringPreferencesKey("invoice_notes")
         val INVOICE_FOOTER = stringPreferencesKey("invoice_footer")
     }
@@ -62,6 +64,7 @@ class UserPreferencesRepository(private val context: Context) {
         val nurseryAddress = preferences[PreferencesKeys.NURSERY_ADDRESS] ?: "Main Road, Greenbelt Nursery Zone"
         val customLogoPath = preferences[PreferencesKeys.CUSTOM_LOGO_PATH]?.takeIf { it.isNotBlank() }
         val customAppIconPath = preferences[PreferencesKeys.CUSTOM_APP_ICON_PATH]?.takeIf { it.isNotBlank() }
+        val appIconThemeId = preferences[PreferencesKeys.APP_ICON_THEME_ID] ?: "default"
         val invoiceNotes = preferences[PreferencesKeys.INVOICE_NOTES] ?: UserPreferences.DEFAULT_INVOICE_NOTES
         val invoiceFooter = preferences[PreferencesKeys.INVOICE_FOOTER] ?: UserPreferences.DEFAULT_INVOICE_FOOTER
 
@@ -74,6 +77,7 @@ class UserPreferencesRepository(private val context: Context) {
             nurseryAddress = nurseryAddress,
             customLogoPath = customLogoPath,
             customAppIconPath = customAppIconPath,
+            appIconThemeId = appIconThemeId,
             invoiceNotes = invoiceNotes,
             invoiceFooter = invoiceFooter
         )
@@ -117,6 +121,12 @@ class UserPreferencesRepository(private val context: Context) {
             } else {
                 preferences[PreferencesKeys.CUSTOM_APP_ICON_PATH] = path
             }
+        }
+    }
+
+    suspend fun updateAppIconThemeId(themeId: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.APP_ICON_THEME_ID] = themeId
         }
     }
 

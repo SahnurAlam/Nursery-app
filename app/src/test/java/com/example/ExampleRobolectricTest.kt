@@ -515,6 +515,21 @@ class ExampleRobolectricTest {
     val prefs = UserPreferences()
     assertEquals(null, prefs.customLogoPath)
     assertEquals(null, prefs.customAppIconPath)
+    assertEquals("default", prefs.appIconThemeId)
+  }
+
+  @Test
+  fun `verify app icon theme switching works`() {
+    val context: Context = ApplicationProvider.getApplicationContext()
+    val defaultTheme = com.example.util.AppIconTheme.DEFAULT
+    assertEquals("default", defaultTheme.id)
+    
+    val emeraldTheme = com.example.util.AppIconTheme.EMERALD
+    assertEquals("emerald", emeraldTheme.id)
+    assertEquals("com.example.MainActivityEmerald", emeraldTheme.aliasName)
+
+    val success = com.example.util.AppIconManager.setAppIcon(context, emeraldTheme)
+    assertTrue(success)
   }
 
   @Test

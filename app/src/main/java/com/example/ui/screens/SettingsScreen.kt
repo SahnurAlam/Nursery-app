@@ -69,6 +69,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -107,6 +108,8 @@ import com.example.ui.theme.ExpenseRed
 import com.example.ui.theme.InStockGreen
 import com.example.ui.theme.InStockGreenContainer
 import com.example.ui.viewmodel.NurseryViewModel
+import com.example.util.AppIconManager
+import com.example.util.AppIconTheme
 import com.example.util.ExportUtils
 import kotlinx.coroutines.launch
 import java.io.BufferedReader
@@ -138,8 +141,6 @@ fun SettingsScreen(
     var showAboutDialog by remember { mutableStateOf(false) }
     var showResetLogoConfirmDialog by remember { mutableStateOf(false) }
     var tempSelectedLogoUri by remember { mutableStateOf<Uri?>(null) }
-    var showResetAppIconConfirmDialog by remember { mutableStateOf(false) }
-    var tempSelectedAppIconUri by remember { mutableStateOf<Uri?>(null) }
 
     // Image picker launcher for custom nursery logo
     val logoPickerLauncher = rememberLauncherForActivityResult(
@@ -147,15 +148,6 @@ fun SettingsScreen(
     ) { uri: Uri? ->
         if (uri != null) {
             tempSelectedLogoUri = uri
-        }
-    }
-
-    // Image picker launcher for custom Android launcher app icon
-    val appIconPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            tempSelectedAppIconUri = uri
         }
     }
 
@@ -589,7 +581,7 @@ fun SettingsScreen(
                 }
             }
 
-            // SECTION 4: Android App Launcher Icon
+            // SECTION 4: Android App Launcher Icon (Dynamic Theme Switcher)
             item {
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -598,7 +590,7 @@ fun SettingsScreen(
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Image, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -607,192 +599,177 @@ fun SettingsScreen(
                         }
 
                         Text(
-                            text = "Select or upload a custom image specifically for the Android launcher app icon displayed in your device's app drawer and home screen for this application.",
+                            text = "Choose your preferred launcher icon theme below. It dynamically updates the real app icon on your device's home screen and app drawer without any shortcuts.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
-                        // App Icon Preview Area
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center
+                        // Active Theme Indicator Banner
+                        val currentActiveTheme = remember(preferences.appIconThemeId) {
+                            AppIconTheme.fromId(preferences.appIconThemeId)
+                        }
+
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            color = InStockGreenContainer.copy(alpha = 0.5f),
+                            border = BorderStroke(1.dp, InStockGreen.copy(alpha = 0.3f))
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                if (tempSelectedAppIconUri != null) {
-                                    Surface(
+                                Surface(
+                                    modifier = Modifier
+                                        .size(54.dp)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .border(1.5.dp, InStockGreen, RoundedCornerShape(14.dp)),
+                                    color = Color.White,
+                                    shadowElevation = 3.dp
+                                ) {
+                                    Image(
+                                        painter = painterResource(id = currentActiveTheme.previewDrawableRes),
+                                        contentDescription = currentActiveTheme.title,
                                         modifier = Modifier
-                                            .size(96.dp)
-                                            .clip(RoundedCornerShape(22.dp))
-                                            .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(22.dp)),
-                                        color = Color.White,
-                                        shadowElevation = 6.dp
-                                    ) {
-                                        AsyncImage(
-                                            model = tempSelectedAppIconUri,
-                                            contentDescription = "New App Icon Preview",
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .padding(6.dp),
-                                            contentScale = ContentScale.Fit
-                                        )
-                                    }
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = MaterialTheme.colorScheme.primaryContainer
-                                    ) {
+                                            .fillMaxSize()
+                                            .padding(4.dp),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
-                                            text = "Preview: New Launcher Icon (Unsaved)",
+                                            text = "Active Icon:",
                                             style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
-                                    }
-                                } else {
-                                    val customIconFile = remember(preferences.customAppIconPath) {
-                                        preferences.customAppIconPath?.let { File(it) }?.takeIf { it.exists() }
-                                    }
-                                    Surface(
-                                        modifier = Modifier
-                                            .size(96.dp)
-                                            .clip(RoundedCornerShape(22.dp))
-                                            .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(22.dp)),
-                                        color = Color.White,
-                                        shadowElevation = 6.dp
-                                    ) {
-                                        if (customIconFile != null) {
-                                            AsyncImage(
-                                                model = customIconFile,
-                                                contentDescription = "Active App Launcher Icon",
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .padding(6.dp),
-                                                contentScale = ContentScale.Fit
-                                            )
-                                        } else {
-                                            Image(
-                                                painter = painterResource(id = R.drawable.app_launcher_logo_1787670340900),
-                                                contentDescription = "Default App Launcher Icon",
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .padding(6.dp),
-                                                contentScale = ContentScale.Fit
-                                            )
-                                        }
-                                    }
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = if (preferences.customAppIconPath != null) InStockGreenContainer else MaterialTheme.colorScheme.secondaryContainer
-                                    ) {
+                                        Spacer(Modifier.width(6.dp))
                                         Text(
-                                            text = if (preferences.customAppIconPath != null) "Active: Custom App Launcher Icon" else "Active: Default Launcher Icon",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = if (preferences.customAppIconPath != null) InStockGreen else MaterialTheme.colorScheme.onSecondaryContainer,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                            text = currentActiveTheme.title,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = InStockGreen
                                         )
                                     }
+                                    Text(
+                                        text = currentActiveTheme.subtitle,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
                         }
 
-                        // App Icon Actions
-                        if (tempSelectedAppIconUri != null) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Button(
-                                    onClick = {
-                                        tempSelectedAppIconUri?.let { uri ->
-                                            viewModel.saveCustomAppIconFromUri(uri, context) { success ->
-                                                if (success) {
-                                                    tempSelectedAppIconUri = null
-                                                }
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .testTag("save_app_icon_button"),
-                                    shape = RoundedCornerShape(10.dp)
-                                ) {
-                                    Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(6.dp))
-                                    Text("Save App Icon")
-                                }
+                        // Icon Theme Options Grid / List
+                        Text(
+                            text = "Available Launcher Icon Styles:",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
 
-                                OutlinedButton(
-                                    onClick = { tempSelectedAppIconUri = null },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .testTag("cancel_app_icon_button"),
-                                    shape = RoundedCornerShape(10.dp)
-                                ) {
-                                    Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(6.dp))
-                                    Text("Cancel")
-                                }
-                            }
-
-                            FilledTonalButton(
-                                onClick = { appIconPickerLauncher.launch("image/*") },
+                        AppIconTheme.entries.forEach { theme ->
+                            val isSelected = theme == currentActiveTheme
+                            OutlinedCard(
+                                onClick = {
+                                    if (!isSelected) {
+                                        viewModel.setAppLauncherIconTheme(theme, context)
+                                    }
+                                },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .testTag("change_selected_app_icon_button"),
-                                shape = RoundedCornerShape(10.dp)
+                                    .testTag("app_icon_theme_${theme.id}"),
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(
+                                    width = if (isSelected) 2.dp else 1.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                                ),
+                                colors = CardDefaults.outlinedCardColors(
+                                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
+                                )
                             ) {
-                                Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text("Choose Different Image")
-                            }
-                        } else {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Button(
-                                    onClick = { appIconPickerLauncher.launch("image/*") },
+                                Row(
                                     modifier = Modifier
-                                        .weight(1f)
-                                        .testTag("select_app_icon_button"),
-                                    shape = RoundedCornerShape(10.dp)
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(if (preferences.customAppIconPath != null) "Change App Icon" else "Upload App Icon")
-                                }
-
-                                if (preferences.customAppIconPath != null) {
-                                    OutlinedButton(
-                                        onClick = { showResetAppIconConfirmDialog = true },
+                                    Surface(
                                         modifier = Modifier
-                                            .weight(1f)
-                                            .testTag("reset_app_icon_button"),
-                                        shape = RoundedCornerShape(10.dp),
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            contentColor = ExpenseRed
-                                        )
+                                            .size(52.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
+                                        color = Color.White,
+                                        shadowElevation = 2.dp
                                     ) {
-                                        Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        Spacer(Modifier.width(6.dp))
-                                        Text("Use Default Icon")
+                                        Image(
+                                            painter = painterResource(id = theme.previewDrawableRes),
+                                            contentDescription = theme.title,
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(4.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    }
+
+                                    Spacer(Modifier.width(12.dp))
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = theme.title,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = theme.subtitle,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    if (isSelected) {
+                                        Surface(
+                                            shape = RoundedCornerShape(20.dp),
+                                            color = MaterialTheme.colorScheme.primary
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Check,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                                Spacer(Modifier.width(4.dp))
+                                                Text(
+                                                    text = "Active",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onPrimary
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        FilledTonalButton(
+                                            onClick = { viewModel.setAppLauncherIconTheme(theme, context) },
+                                            modifier = Modifier.testTag("apply_icon_${theme.id}"),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text("Apply", style = MaterialTheme.typography.labelMedium)
+                                        }
                                     }
                                 }
                             }
                         }
 
                         Text(
-                            text = "💡 Supported formats: PNG, JPG, WEBP. The selected image serves as the app's real launcher icon embedded in the APK.",
+                            text = "💡 টিপস: এখানে যেকোনো আইকনে ট্যাপ করে \"Apply\" করলেই সরাসরি আপনার ডিভাইসের হোম স্ক্রিন এবং অ্যাপ ড্রয়ারে মূল অ্যাপের আইকনটি সাথে সাথে সক্রিয় হবে।",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
                         )
                     }
                 }
@@ -1201,33 +1178,6 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showResetLogoConfirmDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    // Reset App Icon Confirmation Dialog
-    if (showResetAppIconConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { showResetAppIconConfirmDialog = false },
-            title = { Text("Reset App Launcher Icon") },
-            text = {
-                Text("Are you sure you want to remove your custom app launcher icon and restore the default application icon?")
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.removeCustomAppIcon(context)
-                        showResetAppIconConfirmDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed)
-                ) {
-                    Text("Use Default Icon")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showResetAppIconConfirmDialog = false }) {
                     Text("Cancel")
                 }
             }
